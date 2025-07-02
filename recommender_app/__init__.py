@@ -1,8 +1,7 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from .extensions import db, migrate, jwt
 from sqlalchemy import text
 
-db = SQLAlchemy()
 
 def create_app():
     print("Creating Flask app...")
