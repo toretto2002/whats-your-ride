@@ -1,6 +1,7 @@
 from flask import Flask
 from .extensions import db, migrate, jwt
 from sqlalchemy import text
+from . import models
 
 
 def create_app():
@@ -12,6 +13,7 @@ def create_app():
     print("Initializing Flask app with DB URI:", app.config['SQLALCHEMY_DATABASE_URI'])
 
     db.init_app(app)
+    migrate.init_app(app, db)
 
     @app.route("/")
     def healthcheck():
