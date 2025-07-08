@@ -13,7 +13,7 @@ def login():
     if not user:
         return jsonify({'msg': 'Invalid credentials'}), 401
 
-    access_token = create_access_token(identity=str({'id': user.id, 'role': user.role}))
+    access_token = create_access_token(identity=str(user.id), additional_claims={"role": user.role})
     return jsonify(access_token=access_token), 200
 
 @bp.route('/protected', methods=['GET'])
