@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import date
+from recommender_app.core.enums.role_enums import UserRole
 
 class UserBase(BaseModel):
     username: str
@@ -25,4 +26,4 @@ class UserUpdate(UserBase):
     password: Optional[str]
     surname: Optional[str]
     birth_date: Optional[date]
-    role: Optional[str]
+    role: Optional[str] 

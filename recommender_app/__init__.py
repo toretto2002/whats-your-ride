@@ -1,20 +1,51 @@
 from flask import Flask
-from .extensions import db, migrate, jwt
 from sqlalchemy import text
+from .extensions import db, migrate, jwt
 from . import models
+from recommender_app.routes.user_routes import bp as user_routes
+from recommender_app.core.config import Config
 
 
 def create_app():
-    print("Creating Flask app...")
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@db:5432/whats-your-ride'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    print("Initializing Flask app with DB URI:", app.config['SQLALCHEMY_DATABASE_URI'])
+    # Load configuration
+    configure_app(app)
 
+    # Initialize extensions
+    configure_extensions(app)
+
+    # Register blueprints
+    configure_blueprints(app)
+
+    # Healthcheck route
+    add_healthcheck_route(app)
+
+    return app
+
+
+def configure_app(app):
+    app.config.from_object(Config)
+
+    print("Flask configuration loaded.")
+
+
+def configure_extensions(app):
     db.init_app(app)
     migrate.init_app(app, db)
+    
+    # Initialize JWT
+    jwt.init_app(app)
 
+    print("Extensions initialized.")
+
+
+def configure_blueprints(app):
+    app.register_blueprint(user_routes)
+    print("Blueprints registered.")
+
+
+def add_healthcheck_route(app):
     @app.route("/")
     def healthcheck():
         try:
@@ -23,5 +54,3 @@ def create_app():
             return "DB Connected!", 200
         except Exception as e:
             return f"DB Connection failed: {e}", 500
-
-    return app
