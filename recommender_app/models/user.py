@@ -1,7 +1,7 @@
 from recommender_app.extensions import db
-from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Enum as SQLEnum
 from recommender_app.core.enums.role_enums import UserRole
+from recommender_app.core.security import hash_password
 
 class User(db.Model):
 
@@ -16,10 +16,8 @@ class User(db.Model):
     birth_date = db.Column(db.Date, nullable=True)
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = hash_password(password)
     
-    def check_password_hash(self, password):
-        return check_password_hash(self.password_hash, password)
 
 
     

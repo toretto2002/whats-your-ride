@@ -2,8 +2,8 @@ from flask import Flask
 from sqlalchemy import text
 from .extensions import db, migrate, jwt
 from . import models
-from recommender_app.routes.user_routes import bp as user_routes
 from recommender_app.core.config import Config
+from recommender_app.api.routes import blueprints
 
 
 def create_app():
@@ -41,7 +41,8 @@ def configure_extensions(app):
 
 
 def configure_blueprints(app):
-    app.register_blueprint(user_routes)
+    for bp in blueprints:
+        app.register_blueprint(bp)
     print("Blueprints registered.")
 
 
