@@ -9,8 +9,6 @@ def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
-    print(f"Login attempt for user: {username}")
-    print(f"Password provided: {password}")
     user = AuthService.login_user(username, password)
     if not user:
         return jsonify({'msg': 'Invalid credentials'}), 401
