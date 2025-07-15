@@ -79,4 +79,5 @@ KEY_MAPPING = {
     "Rake (fork angle)": ("fork_angle", extract_float),
     "Electrical" : "battery",
     "Starter" : "starter",
+    "Instruments": "strumentation",
 }
