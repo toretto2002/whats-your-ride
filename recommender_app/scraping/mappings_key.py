@@ -77,4 +77,6 @@ KEY_MAPPING = {
     "Weight incl. oil, gas, etc.": ("wet_weight", extract_float),
     "Alternate seat height": ("alternative_seat_height", extract_float),
     "Rake (fork angle)": ("fork_angle", extract_float),
+    "Electrical" : "battery",
+    "Starter" : "starter",
 }
