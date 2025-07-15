@@ -54,6 +54,7 @@ class Motorcycle(db.Model):
     dry_weight = db.Column(db.Float, nullable=True)
     wet_weight = db.Column(db.Float, nullable=True)
     seat_height = db.Column(db.Float, nullable=True)
+    alternative_seat_height = db.Column(db.Float, nullable=True)
     overall_length = db.Column(db.Float, nullable=True)
     overall_width = db.Column(db.Float, nullable=True)
     overall_height = db.Column(db.Float, nullable=True)
