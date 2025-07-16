@@ -3,6 +3,8 @@ from playwright.sync_api import Page
 import re
 from recommender_app.scraping.mappings_key import KEY_MAPPING
 from recommender_app.utils.parsing_utils import extract_float, extract_int
+from recommender_app import create_app
+from recommender_app.services.motorcycle_service import save_bike_data_on_db
 
 url_base = "https://bikez.com/"
 
@@ -59,7 +61,7 @@ def scrape_with_playwright():
                         # aggiungi la singola versione alla lista
                         if not any(m['url'] == href.replace("..", url_base) for m in model_versions):
                             model_versions.append({
-                                "name": title,
+                                "name": model_name,
                                 "url": href.replace("..", url_base)
                             })
 
@@ -92,7 +94,10 @@ def scrape_with_playwright():
 
                 specs = parse_specs(page)
 
-                # print(f"Specs for {model['name']}: {specs}")
+                try:
+                    save_bike_data_on_db(specs)
+                except Exception as e:
+                    print(f"Error saving specs for {model['name']}: {e}")
 
 
 
@@ -101,8 +106,6 @@ def scrape_with_playwright():
 def model_with_multiple_versions():
     pass
 
-def save_bike_data():
-    pass
 
 def parse_specs(page: Page) -> dict:
 
@@ -111,18 +114,26 @@ def parse_specs(page: Page) -> dict:
         rows = page.query_selector_all("table.Grid tr")
         final_data = {}
         data = {}
+        diameter_count = 0
 
         for row in rows:
             tds = row.query_selector_all("td")
             if len(tds) == 2:
                 raw_key = tds[0].text_content().strip()
                 raw_value = tds[1].text_content().strip()
+                    
                 if raw_key and raw_value:
+                    if raw_key == "Diameter":
+                        diameter_count += 1
+                        raw_key = "Diameter" + str(diameter_count)
                     data[raw_key] = raw_value
 
         # print("Raw data extracted: ", data)
+        diameter_count = 1
+
 
         for raw_key, raw_value in data.items():
+
             mapped = KEY_MAPPING.get(raw_key)
             if mapped:
                 if isinstance(mapped, tuple):
@@ -133,22 +144,28 @@ def parse_specs(page: Page) -> dict:
                         print(f"Failed parsing '{raw_key}' with value '{raw_value}': {e}")
                         parsed_value = None
                 else:
-                    db_key = mapped
-                    parsed_value = raw_value
+                        db_key = mapped
+                        parsed_value = raw_value
 
                 final_data[db_key] = parsed_value
                 # print(f"Mapped '{raw_key}' to '{db_key}': {parsed_value}")
             else:
                 if raw_key not in ["Insurance costs", "Maintenance", "Ask questions", "Related bikes", "Update specs", "Rating"]:
                     print(f"Model with url {page.url} has key '{raw_key}' not in KEY_MAPPING, skipped.")
+        
+        # Aggiungi l'URL della pagina come chiave
+        final_data["source_url"] = page.url
+        final_data["brand"] = page.query_selector("h1").text_content().strip().split()[0] if page.query_selector("h1") else "Unknown Brand"
+        final_data["full_name"] = final_data.get("brand", "") + " " + final_data.get("name", "")
+
         return final_data
    
     except Exception as e:
         print(f"Error parsing specs: {e}")
-        print("")
         return {}
 
-    
+app = create_app()    
 
 if __name__ == "__main__":
-    scrape_with_playwright()
+    with app.app_context():
+        scrape_with_playwright()
