@@ -10,5 +10,12 @@ bp = Blueprint("bot_routes", __name__)
 @jwt_required()
 def handle_bot_request():
     data = request.get_json()
-    response = bot_service.handle_bot_request(data)
-    return jsonify(response), 200
+    message = data.get("message")
+    if not message:
+        return jsonify({"error": "Messaggio mancante"}), 400
+
+    try:
+        response = bot_service.ask(message)
+        return jsonify({"answer": response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

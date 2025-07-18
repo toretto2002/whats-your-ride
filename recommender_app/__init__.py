@@ -1,6 +1,6 @@
 from flask import Flask
 from sqlalchemy import text
-from .extensions import db, migrate, jwt
+from recommender_app.extensions import db, migrate, jwt
 from . import models
 from recommender_app.core.config import Config
 from recommender_app.api.routes import blueprints

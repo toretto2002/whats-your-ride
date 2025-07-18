@@ -35,6 +35,7 @@ RUN apt-get update && \
 
 # Install deps and package
 RUN poetry config virtualenvs.create false \
+  && poetry lock \
   && poetry install --no-interaction --no-ansi
 
 # Install Playwright and its dependencies
