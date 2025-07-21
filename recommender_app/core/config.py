@@ -8,3 +8,5 @@ class Config:
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
     FLASK_DEBUG = int(os.environ.get('FLASK_DEBUG', 1))
     SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///site.db')
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    OPENAI_MODEL = "gpt-4o"  # o gpt-3.5-turbo

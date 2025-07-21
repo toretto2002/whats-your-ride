@@ -4,10 +4,14 @@ from recommender_app.extensions import db, migrate, jwt
 from . import models
 from recommender_app.core.config import Config
 from recommender_app.api.routes import blueprints
+from recommender_app.core.logging_config import configure_logging
+
 
 
 def create_app():
     app = Flask(__name__)
+
+    configure_logging()
 
     # Load configuration
     configure_app(app)
