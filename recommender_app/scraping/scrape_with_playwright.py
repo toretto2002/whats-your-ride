@@ -5,6 +5,7 @@ from recommender_app.scraping.mappings_key import KEY_MAPPING
 from recommender_app.utils.parsing_utils import extract_float, extract_int
 from recommender_app import create_app
 from recommender_app.services.motorcycle_service import save_bike_data_on_db
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 url_base = "https://bikez.com/"
 
@@ -28,80 +29,90 @@ def scrape_with_playwright():
                     "url": brand_url
                 })
 
-        # print("effective brands found: ", len(brands))     
+        browser.close()
 
-        for brand in brands:
-            print(f"Brand: {brand['name']}, URL: {brand['url']}")
-            page.goto(brand['url'])
-            page.wait_for_selector("table")
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(process_brand, brand) for brand in brands]
 
-            model_rows = page.query_selector_all("tr.even")
-            model_versions = []
-            multi_version_model_urls = []
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Errore nel thread: {e}")
 
-            for model in model_rows:
-                tds = []
-                tds = model.query_selector_all("td")
-                if tds[0]:
-                    if tds[0].query_selector("a"):
+def process_brand(brand: dict):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+
+        model_versions = extract_brand_infos(page, brand, brand['url'])
+
+        for model in model_versions:
+            try:
+                page.goto(model['url'])
+                page.wait_for_selector("table")
+                specs = parse_specs(page)
+                save_bike_data_on_db(specs)
+            except Exception as e:
+                print(f"Errore nel salvataggio di {model['name']}: {e}")
+
+        browser.close()
+
+def extract_brand_infos(page, brand, href):
+    page.goto(brand['url'])
+    page.wait_for_selector("table")
+
+    model_rows = page.query_selector_all("tr.even")
+    model_versions = []
+    multi_version_model_urls = []
+
+    for model in model_rows:
+        tds = []
+        tds = model.query_selector_all("td")
+        if tds[0]:
+            if tds[0].query_selector("a"):
                         # modello con più versioni
-                        model_url = tds[1].query_selector("a").get_attribute("href")
-                        model_url = model_url.replace("..", url_base)
+                model_url = tds[1].query_selector("a").get_attribute("href")
+                model_url = model_url.replace("..", url_base)
 
-                        multi_version_model_urls.append(model_url)
+                multi_version_model_urls.append(model_url)
                         
                         # Vai nella pagina del modello per estrarre le versioni
                             
-                    else:
+            else:
                         # modello con una sola versione
-                        model_url = tds[1].query_selector("a").get_attribute("href")
-                        model_url = model_url.replace("..", url_base)
-                        model_name = tds[1].text_content().strip()
+                model_url = tds[1].query_selector("a").get_attribute("href")
+                model_url = model_url.replace("..", url_base)
+                model_name = tds[1].text_content().strip()
 
                         # aggiungi la singola versione alla lista
-                        if not any(m['url'] == href.replace("..", url_base) for m in model_versions):
-                            model_versions.append({
+                if not any(m['url'] == href.replace("..", url_base) for m in model_versions):
+                    model_versions.append({
                                 "name": model_name,
                                 "url": href.replace("..", url_base)
                             })
 
-            for url in multi_version_model_urls:
-                page.goto(url)
-                page.wait_for_selector("a")
+    for url in multi_version_model_urls:
+        page.goto(url)
+        page.wait_for_selector("a")
 
 
-                links = page.query_selector_all('a')
-                for link in links:
-                    title_span = link.query_selector('span[style*="font-size:18px"] b')
-                    if title_span:
-                        href = link.get_attribute('href')
-                        title = title_span.text_content().strip()
+        links = page.query_selector_all('a')
+        for link in links:
+            title_span = link.query_selector('span[style*="font-size:18px"] b')
+            if title_span:
+                href = link.get_attribute('href')
+                title = title_span.text_content().strip()
                         # print(f"Model title: {title}, URL: {href}")
-                        if not any(m['url'] == href.replace("..", url_base) for m in model_versions):
-                            model_versions.append({
+                if not any(m['url'] == href.replace("..", url_base) for m in model_versions):
+                    model_versions.append({
                                 "name": title,
                                 "url": href.replace("..", url_base)
                             })
 
 
-            # print(f"Found {len(model_versions)} total model versions for brand {brand['name']}")
-
-            # Ora VISITA le versioni UNA ALLA VOLTA (eviti perdita di contesto)
-            for model in model_versions:
-                # print(f"Visiting model version: {model['name']} ({model['url']})")
-                page.goto(model['url'])
-                page.wait_for_selector("table")
-
-                specs = parse_specs(page)
-
-                try:
-                    save_bike_data_on_db(specs)
-                except Exception as e:
-                    print(f"Error saving specs for {model['name']}: {e}")
-
-
-
-        browser.close()
+            return model_versions
 
 def model_with_multiple_versions():
     pass

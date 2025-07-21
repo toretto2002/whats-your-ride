@@ -3,6 +3,11 @@ from recommender_app.models.motorcycle import Motorcycle
 
 def save_bike_data_on_db( data: dict):
 
-    m = Motorcycle(**data)
-    db.session.add(m)
+    exists = db.session.query(Motorcycle).filter_by(source_url=data['source_url']).first()
+    if exists:
+        print(f"Skip model already in DB: {data['full_name']}")
+        return
+
+    bike = Motorcycle(**data)
+    db.session.add(bike)
     db.session.commit()
