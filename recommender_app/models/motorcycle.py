@@ -75,4 +75,4 @@ class Motorcycle(db.Model):
     factory_warranty = db.Column(db.String(500), nullable=True)
     battery = db.Column(db.String(500), nullable=True)
     starter = db.Column(db.String(500), nullable=True)
-    strumentation = db.Column(db.String(300), nullable=True)
+    strumentation = db.Column(db.String(600), nullable=True)

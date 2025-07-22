@@ -6,6 +6,7 @@ from recommender_app.utils.parsing_utils import extract_float, extract_int
 from recommender_app import create_app
 from recommender_app.services.motorcycle_service import save_bike_data_on_db
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urljoin
 
 url_base = "https://bikez.com/"
 
@@ -28,10 +29,14 @@ def scrape_with_playwright():
                     "name": brand_name,
                     "url": brand_url
                 })
+            
+            # count += 1
+            # if count >= 5:  # Limita a 5 brand per test
+            #     break
 
         browser.close()
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(process_brand, brand) for brand in brands]
 
             for future in as_completed(futures):
@@ -41,23 +46,32 @@ def scrape_with_playwright():
                     print(f"Errore nel thread: {e}")
 
 def process_brand(brand: dict):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+    from recommender_app import create_app
+    app = create_app()
 
-
-        model_versions = extract_brand_infos(page, brand, brand['url'])
-
-        for model in model_versions:
+    with app.app_context():  # <-- IMPORTANTE
+        with sync_playwright() as p:
             try:
-                page.goto(model['url'])
-                page.wait_for_selector("table")
-                specs = parse_specs(page)
-                save_bike_data_on_db(specs)
-            except Exception as e:
-                print(f"Errore nel salvataggio di {model['name']}: {e}")
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
 
-        browser.close()
+                model_versions = extract_brand_infos(page, brand, brand['url'])
+                
+                if not model_versions:
+                    print(f"Brand {brand['name']} ha restituito None o errore.")
+                    return
+
+                for model in model_versions:
+                    try:
+                        page.goto(model['url'])
+                        page.wait_for_selector("table")
+                        specs = parse_specs(page)
+                        save_bike_data_on_db(specs)
+                    except Exception as e:
+                        print(f"Errore nel salvataggio di {model['name']}: {e}")
+            finally:
+                browser.close()
+
 
 def extract_brand_infos(page, brand, href):
     page.goto(brand['url'])
@@ -87,10 +101,10 @@ def extract_brand_infos(page, brand, href):
                 model_name = tds[1].text_content().strip()
 
                         # aggiungi la singola versione alla lista
-                if not any(m['url'] == href.replace("..", url_base) for m in model_versions):
+                if not any(m['url'] == model_url for m in model_versions):
                     model_versions.append({
                                 "name": model_name,
-                                "url": href.replace("..", url_base)
+                                "url": model_url
                             })
 
     for url in multi_version_model_urls:
@@ -99,20 +113,29 @@ def extract_brand_infos(page, brand, href):
 
 
         links = page.query_selector_all('a')
+        existing_urls = set(m['url'] for m in model_versions)
+
         for link in links:
             title_span = link.query_selector('span[style*="font-size:18px"] b')
-            if title_span:
-                href = link.get_attribute('href')
-                title = title_span.text_content().strip()
-                        # print(f"Model title: {title}, URL: {href}")
-                if not any(m['url'] == href.replace("..", url_base) for m in model_versions):
-                    model_versions.append({
-                                "name": title,
-                                "url": href.replace("..", url_base)
-                            })
+            if not title_span:
+                continue
+
+            href = link.get_attribute('href')
+            if not href:
+                continue
+
+            url = urljoin(url_base, href)
+            title = title_span.text_content().strip()
+
+            if url not in existing_urls:
+                model_versions.append({
+                    "name": title,
+                    "url": url
+                })
+                existing_urls.add(url)
 
 
-            return model_versions
+    return model_versions
 
 def model_with_multiple_versions():
     pass

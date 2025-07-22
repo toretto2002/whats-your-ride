@@ -133,6 +133,7 @@ class OpenAiBotService:
                 - Trova motociclette che soddisfano i criteri specificati dall'utente.
                 - Se non ci sono risultati esatti, suggerisci alternative simili o con tolleranza su uno o più valori (es. 5% di margine su peso o potenza).
                 - Se una colonna è nullable e non ci sono dati, comunica l’assenza di informazioni con gentilezza.
+                - Se l’utente applica un filtro (es. peso < 200 kg) o un ordinamento (es. più potente), escludi automaticamente i record in cui il valore della colonna è NULL. Non devono comparire nei risultati.
 
                 📊 Campi principali della tabella:
                 - `brand`, `name`, `full_name`: identificano il modello.
