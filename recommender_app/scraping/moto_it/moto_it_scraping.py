@@ -9,6 +9,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import html
 from pprint import pprint
+from recommender_app.scraping.moto_it.mappings_key_moto_it import KEY_MAPPING
+import re
+from recommender_app.utils.parsing_utils import parse_mm, parse_kg, parse_float, parse_boolean, parse_price, parse_power, parse_torque
 
 
 url_base = "https://www.moto.it"
@@ -34,6 +37,8 @@ def scrape_with_playwright():
                         "name": brand_name,
                         "url": brand_link
                     })
+
+                
 
                 print(f"Brand found: {brand_name} - URL: {brand_link}")
                 break  # Limita a un brand per test
@@ -128,13 +133,6 @@ def extract_brand_infos(page: Page, brand: dict, browser):
             print(f"Error processing model {model['name']}: {e}")
             
 
-        
-
-        
-
-
-
-
 def extract_price_range(price_str: str) -> tuple[float, float]:
     # Rimuove entità HTML come &nbsp; e decodifica simboli
     cleaned = html.unescape(price_str)
@@ -160,9 +158,6 @@ def clean_model_name(model_name: str) -> str:
     model_name = re.sub(r"\s+", " ", model_name).strip()
     return model_name
 
-
-def save_model_on_db(model_data: dict):
-    print(f"Saving model data to DB: {model_data}")
 
 def extract_model_versions(model, browser) -> list:
     versions = []
@@ -240,8 +235,50 @@ def clean_text(text):
 
 def normalize_key(key):
     return clean_text(key).lower().replace(" ", "_")
-     
 
+
+def map_version_data(raw_data: dict) -> dict:
+    mapped = {}
+
+    for k, v in raw_data.items():
+        key = KEY_MAPPING.get(k.strip())
+        if not key:
+            continue
+
+        # conversioni smart
+        clean_value = v.strip()
+
+        if key.startswith("seat_height") or "travel" in key or "size" in key or "bore" in key or "stroke" in key:
+            mapped[key] = parse_mm(clean_value)
+        elif key.endswith("_weight"):
+            mapped[key] = parse_kg(clean_value)
+        elif key in ["displacement", "fuel_capacity"]:
+            mapped[key] = parse_float(clean_value)
+        elif key in ["ride_by_wire", "traction_control", "abs"]:
+            mapped[key] = parse_boolean(clean_value)
+        elif key in ["price"]:
+            mapped[key] = parse_price(clean_value)
+        elif key == "raw_power":
+            mapped.update(parse_power(clean_value))
+        elif key == "raw_torque":
+            mapped.update(parse_torque(clean_value))
+        else:
+            mapped[key] = clean_value
+
+    return mapped
+
+
+def save_version_on_db(version_data: dict):
+    print(f"Saving version data to DB: {version_data}")
+    # Qui si dovrebbe implementare la logica per salvare i dati della versione nel database
+
+def save_brand_on_db(brand_data: dict):
+    print(f"Saving brand data to DB: {brand_data}")
+    # Qui si dovrebbe implementare la logica per salvare i dati del brand nel database
+
+def save_model_on_db(model_data: dict):
+    print(f"Saving model data to DB: {model_data}")
+    # Qui si dovrebbe implementare la logica per salvare i dati del modello nel database
 
 app = create_app()    
 
