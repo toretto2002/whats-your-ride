@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import Page
 import re
-from recommender_app.scraping.mappings_key import KEY_MAPPING
+from recommender_app.scraping.bikez.mappings_key import KEY_MAPPING
 from recommender_app.utils.parsing_utils import extract_float, extract_int
 from recommender_app import create_app
 from recommender_app.services.motorcycle_service import save_bike_data_on_db

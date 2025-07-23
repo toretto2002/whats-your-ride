@@ -229,7 +229,7 @@ def extract_version_data(page, url):
                 if value.lower() not in ["n.d.", "-"]:
                     data[key] = value
     
-    # pprint(f"Extracted version data: {data}")
+    pprint(f"Extracted version data: {data}")
 
     return data
 
