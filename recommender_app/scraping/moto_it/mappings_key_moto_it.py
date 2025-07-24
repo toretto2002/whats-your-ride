@@ -1,67 +1,78 @@
 # recommender_app/scraping/mappings_key.py
 KEY_MAPPING = {
     # Generali
-    "Marca": "brand_name",
-    "Modello": "model_name",
-    "Allestimento": "name",
-    "Categoria": "category",
-    "Prezzo": "price",
-    "Inizio produzione": "year_start",
-    "Fine produzione": "year_end",
-    "Garanzia": "warranty",
-    "Optional": "optional",
+    "allestimento": "name",
+    "prezzo": "price",
+    "inizio_produzione": "year_start",
+    "fine produzione": "year_end",
+    "garanzia": "warranty",
+    "optional": "optional",
 
     # Misure
-    "Altezza sella da terra MIN": "seat_height_min",
-    "Altezza sella da terra MAX": "seat_height_max",
-    "Peso a secco": "dry_weight",
-    "Peso in ordine di marcia": "wet_weight",
+    "lunghezza": "length", #######
+    "larghezza": "width", #######
+    "altezza": "height", #######
+    "altezza_minima_da_terra": "min_height_from_ground", #######
+    "altezza_sella_da_terra_min": "seat_height_min",
+    "altezza_sella_da_terra_max": "seat_height_max",
+    "interasse": "wheelbase", #######
+    "peso_a_secco": "dry_weight",
+    "peso_in_ordine_di_marcia": "wet_weight",
 
     # Motore
-    "Cilindrata": "displacement",
-    "Tipo motore": "engine_type",
-    "Tempi": "stroke",
-    "Cilindri": "cylinders",
-    "Configurazione cilindri": "cylinder_config",
-    "Raffreddamento": "cooling",
-    "Avviamento": "starter",
-    "Alimentazione": "fuel_system",
-    "Alesaggio": "bore",
-    "Corsa": "stroke_length",
-    "Frizione": "clutch",
-    "Numero valvole": "valves",
-    "Distribuzione": "distribution",
-    "Ride by Wire": "ride_by_wire",
-    "Controllo trazione": "traction_control",
-    "Mappe motore": "engine_maps",
-    "Potenza": "raw_power",  # verrà parsata dopo
-    "Coppia": "raw_torque",  # idem
-    "Emissioni": "emissions",
-    "Tipologia cambio": "gearbox_type",
-    "Numero marce": "gears",
-    "Capacità serbatoio carburante": "fuel_capacity",
-    "Trasmissione finale": "final_drive",
+    "cilindrata": "displacement",
+    "tipo_motore": "engine_type",
+    "tempi": "stroke",
+    "cilindri": "cylinders",
+    "configurazione_cilindri": "cylinder_config",
+    "disposizione_cilindri": "cylinder_disposition",  #######
+    "inclinazione_cilindri": "cylinder_inclination",  #######
+    "inclinazione_cilindri_a_v": "cylinder_inclination_v",  #######
+    "raffreddamento": "cooling",
+    "avviamento": "starter",
+    "alimentazione": "fuel_system",
+    "alesaggio": "bore",
+    "corsa": "stroke_length",
+    "frizione": "clutch",
+    "numero_valvole": "valves",
+    "distribuzione": "distribution",
+    "ride_by_wire": "ride_by_wire",
+    "controllo_trazione": "traction_control",
+    "mappe_motore": "engine_maps",
+    "potenza": "raw_power",  # verrà parsata dopo
+    "coppia": "raw_torque",  # idem
+    "emissioni": "emissions",
+    "depotenziata": "depowered", ########
+    "tipologia_cambio": "gearbox_type",
+    "numero_marce": "gears",
+    "presenza_retromarcia": "reverse_gear", ########
+    "consumo_medio_vmtc": "average_consumption", ########
+    "capacità_serbatoio_carburante": "fuel_capacity",
+    "trasmissione_finale": "final_drive",
 
     # Ciclistica
-    "Telaio": "frame_type",
-    "Sospensione anteriore": "front_suspension",
-    "Escursione anteriore": "front_travel",
-    "Sospensione posteriore": "rear_suspension",
-    "Escursione posteriore": "rear_travel",
-    "Tipo freno anteriore": "front_brake_type",
-    "Misura freno anteriore": "front_brake_size",
-    "Tipo freno posteriore": "rear_brake_type",
-    "Misura freno posteriore": "rear_brake_size",
-    "ABS": "abs",
-    "Tipo ruote": "wheel_type",
-    "Misura cerchio anteriore": "front_wheel_size",
-    "Pneumatico anteriore": "front_tire",
-    "Misura cerchio posteriore": "rear_wheel_size",
-    "Pneumatico posteriore": "rear_tire",
+    "telaio": "frame_type",
+    "sospensione_anteriore": "front_suspension",
+    "escursione_anteriore": "front_travel",
+    "sospensione_posteriore": "rear_suspension",
+    "escursione_posteriore": "rear_travel",
+    "tipo_freno_anteriore": "front_brake_type",
+    "misura_freno_anteriore": "front_brake_size",
+    "tipo_freno_posteriore": "rear_brake_type",
+    "misura_freno_posteriore": "rear_brake_size",
+    "abs": "abs",
+    "tipo_ruote": "wheel_type",
+    "misura_cerchio_anteriore": "front_wheel_size",
+    "pneumatico_anteriore": "front_tire",
+    "misura_cerchio_posteriore": "rear_wheel_size",
+    "pneumatico_posteriore": "rear_tire",
 
     # Batteria
-    "Batteria": "battery",
-    "Capacità": "battery_capacity",
-    "Autonomia e durata": "battery_life",
-    "Batteria secondaria": "secondary_battery"
+    "batteria": "battery",
+    "capacità": "battery_capacity",
+    "autonomia_e_durata": "battery_life",
+    "batteria_secondaria": "secondary_battery",
+    
+    #relations
+    "model_id": "model_id",
 }

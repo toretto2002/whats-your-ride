@@ -17,8 +17,13 @@ class Version(db.Model):
     optional = db.Column(db.String(500))
 
     # misure
+    length = db.Column(db.Float)
+    width = db.Column(db.Float)
+    height = db.Column(db.Float)
+    min_height_from_ground = db.Column(db.Float)  
     seat_height_min = db.Column(db.Float)
     seat_height_max = db.Column(db.Float)
+    wheelbase = db.Column(db.Float)
     dry_weight = db.Column(db.Float)
     wet_weight = db.Column(db.Float)
 
@@ -28,6 +33,9 @@ class Version(db.Model):
     stroke = db.Column(db.Integer)
     cylinders = db.Column(db.Integer)
     cylinder_config = db.Column(db.String(100))
+    cylinder_disposition = db.Column(db.String(100))
+    cylinder_inclination = db.Column(db.String(100))
+    cylinder_inclination_v = db.Column(db.String(100))
     cooling = db.Column(db.String(100))
     starter = db.Column(db.String(100))
     fuel_system = db.Column(db.String(100))
@@ -44,8 +52,11 @@ class Version(db.Model):
     torque_nm = db.Column(db.Float)
     torque_rpm = db.Column(db.Integer)
     emissions = db.Column(db.String(100))
+    depowered = db.Column(db.Boolean)
     gearbox_type = db.Column(db.String(100))
     gears = db.Column(db.Integer)
+    reverse_gear = db.Column(db.Boolean)
+    average_consumption = db.Column(db.String(100))
     fuel_capacity = db.Column(db.Float)
     final_drive = db.Column(db.String(100))
 

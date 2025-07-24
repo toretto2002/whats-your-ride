@@ -22,3 +22,7 @@ class ModelRepository(Protocol):
     def get_all_models(self) -> List[Model]:
         """Get all models."""
         pass
+    
+    def get_or_create_model(self, model_data: dict) -> int:
+        """Get an existing model or create a new one."""
+        pass

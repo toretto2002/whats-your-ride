@@ -16,6 +16,13 @@ class BrandService:
 
         new_brand = Brand(**dto)
         return self.brand_repository.save_brand(new_brand)
+    
+    def get_brand_by_name(self, name: str) -> Brand:
+        """Get a brand by its name."""
+        brand = self.brand_repository.get_brand_by_name(name)
+        if not brand:
+            raise ValueError(f"Brand {name} does not exist.")
+        return brand
 
 
 

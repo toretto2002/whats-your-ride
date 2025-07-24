@@ -21,3 +21,8 @@ class CategoryRepository(Protocol):
     def delete_category(self, category_id: str) -> None:
         """Delete a category by its ID."""
         pass
+    
+    def get_category_by_name(self, name: str) -> Optional[Category]:
+        """Get a category by its name."""
+        pass
+    

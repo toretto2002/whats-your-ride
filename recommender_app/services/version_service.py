@@ -8,7 +8,7 @@ class VersionService:
         self.version_repository = VersionRepositoryImpl()
 
     def create_version(self, version: Version) -> int:
-        return self.version_repository.create(version)
+        return self.version_repository.create_version(version)
 
     def get_version_by_id(self, version_id: int) -> VersionOut:
         return self.version_repository.get_by_id(version_id)

@@ -1,7 +1,5 @@
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import Page
-import re
-from recommender_app.scraping.mappings_key import KEY_MAPPING
 from recommender_app.utils.parsing_utils import extract_float, extract_int
 from recommender_app import create_app
 from recommender_app.services.motorcycle_service import save_bike_data_on_db
@@ -72,7 +70,7 @@ def process_brand(brand: dict):
                 page = browser.new_page()
                 page.goto(url_base + brand['url'])
 
-                models = extract_brand_infos(page, brand, browser)
+                extract_brand_infos(page, brand, browser)
 
                 browser.close()
             except Exception as e:
@@ -83,7 +81,7 @@ def extract_brand_infos(page: Page, brand: dict, browser):
     print(f"Processing brand: {brand['name']} - URL: {brand['url']}")
     models = []
 
-    save_brand_on_db(brand)
+    brand_id = save_brand_on_db(brand)
 
     cards_models_in_list = page.query_selector_all("div.plist-pcard")
 
@@ -124,36 +122,50 @@ def extract_brand_infos(page: Page, brand: dict, browser):
 
     print(f"Found {len(models)} models for brand: {brand['name']}")
 
+    category_id = None
+    versions_ids = []
+    
     for model in models:
         try:
-            
+            # Estrai le versioni (senza ancora salvarle)
             versions = extract_model_versions(model, browser)
-
-            for version in versions:
-                if not version:
-                    print(f"No version data found for model: {model['name']}")
-                    continue
-
-                
-
-                save_version_on_db(version)
 
             if not versions:
                 print(f"No versions found for model: {model['name']}")
                 continue
 
+            # Aggiungi la categoria (una tantum)
+            category_id = add_category_if_not_exists(versions[0].get("categoria", "Unknown Category"))
+
+            # Salva il model PRIMA, senza le versioni
             model_data = {
                 "name": model['name'],
-                "brand": brand['name'],
-                "url": model['url'],
+                "brand_id": brand_id,
                 "lower_price": model['lower_price'],
                 "upper_price": model['upper_price'],
-                "versions": versions,
+                "category_id": category_id
             }
+
+            model_id = save_model_on_db(model_data)  # questa funzione deve ritornare l'id
+            versions_ids = []
+
+            # Ora salva le versioni, con il model_id corretto
+            for version in versions:
+                if not version:
+                    print(f"No version data found for model: {model['name']}")
+                    continue
+
+                version['model_id'] = model_id  # 👉 QUI risolvi l'errore
+
+                version_id = save_version_on_db(version)
+                if version_id != -1:
+                    versions_ids.append(version_id)
+                else:
+                    raise ValueError(f"Failed to save version for model: {model['name']}")
 
         except Exception as e:
             print(f"Error processing model {model['name']}: {e}")
-            
+  
 
 def extract_price_range(price_str: str) -> tuple[float, float]:
     # Rimuove entità HTML come &nbsp; e decodifica simboli
@@ -232,24 +244,28 @@ def extract_version_data(page, url):
     data = {}
     page.goto(url_base + url)
     page.wait_for_selector(".apanels-pan-wrapper")
+    
+    try:
 
-    panels = page.query_selector_all(".apanels-pan-wrapper")
+        panels = page.query_selector_all(".apanels-pan-wrapper")
 
-    for panel in panels:
-        rows = panel.query_selector_all("tr")
-        for row in rows:
-            th = row.query_selector("th")
-            td = row.query_selector("td")
-            if th and td:
-                key = normalize_key(th.text_content())
-                value = clean_text(td.inner_text())
-                if value.lower() not in ["n.d.", "-"]:
-                    data[key] = value
+        for panel in panels:
+            rows = panel.query_selector_all("tr")
+            for row in rows:
+                th = row.query_selector("th")
+                td = row.query_selector("td")
+                if th and td:
+                    key = normalize_key(th.text_content())
+                    value = clean_text(td.inner_text())
+                    if value.lower() not in ["n.d.", "-"]:
+                        data[key] = value
+    except Exception as e:
+        print(f"Error extracting version data from {url}: {e}")
+        return None
     
     pprint(f"Extracted version data: {data}")
 
     return data
-
 
 
 def clean_text(text):
@@ -263,20 +279,21 @@ def map_version_data(raw_data: dict) -> dict:
     mapped = {}
 
     for k, v in raw_data.items():
-        key = KEY_MAPPING.get(k.strip())
+        key = KEY_MAPPING.get(k.strip().lower())
         if not key:
+            print(f"Key '{k}' not found in mapping, skipping.")
             continue
 
         # conversioni smart
         clean_value = v.strip()
 
-        if key.startswith("seat_height") or "travel" in key or "size" in key or "bore" in key or "stroke" in key:
+        if key.startswith("seat_height") or "travel" in key or "size" in key or "bore" in key or "stroke" in key or "weight" in key or "length" in key or "width" in key or "height" in key or "wheelbase" in key:
             mapped[key] = parse_mm(clean_value)
         elif key.endswith("_weight"):
             mapped[key] = parse_kg(clean_value)
         elif key in ["displacement", "fuel_capacity"]:
             mapped[key] = parse_float(clean_value)
-        elif key in ["ride_by_wire", "traction_control", "abs"]:
+        elif key in ["ride_by_wire", "traction_control", "abs", "depowered", "reverse_gear"]:
             mapped[key] = parse_boolean(clean_value)
         elif key in ["price"]:
             mapped[key] = parse_price(clean_value)
@@ -308,7 +325,7 @@ def save_version_on_db(version_data: dict) -> int:
 def save_brand_on_db(brand_data: dict) -> int:
     brand_service = BrandService()
     try:
-        brand_id = brand_service.create_brand(brand_data)
+        brand_id = brand_service.get_brand_by_name(brand_data["name"]).id or brand_service.create_brand(brand_data)
         print(f"Brand saved with id: {brand_id}")
         return brand_id
     except Exception as e:
@@ -318,8 +335,9 @@ def save_brand_on_db(brand_data: dict) -> int:
 def save_model_on_db(model_data: dict):
     model_service = ModelService()
     try:
-        model = model_service.create_model(model_data)
-        print(f"Model saved: {model}")
+        model_id = model_service.get_or_create_model(model_data)
+        print(f"Model saved with id: {model_id}")
+        return model_id
     except Exception as e:
         print(f"Error saving model data: {e}")
 
@@ -328,10 +346,10 @@ def add_category_if_not_exists(category_name: str) -> int:
     
     existing_category = category_service.get_category_by_name(category_name)
     if existing_category:
-        return existing_category['id']
+        return existing_category.id
     
-    new_category = category_service.create_category({"name": category_name})
-    return new_category['id']
+    new_category_id = category_service.create_category({"name": category_name})
+    return new_category_id
 
 
 app = create_app()    
