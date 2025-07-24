@@ -15,7 +15,6 @@ class Version(db.Model):
     price = db.Column(db.Float)
     warranty = db.Column(db.String(100))
     optional = db.Column(db.String(500))
-    category = db.Column(db.String(100))
 
     # misure
     seat_height_min = db.Column(db.Float)

@@ -12,6 +12,10 @@ from pprint import pprint
 from recommender_app.scraping.moto_it.mappings_key_moto_it import KEY_MAPPING
 import re
 from recommender_app.utils.parsing_utils import parse_mm, parse_kg, parse_float, parse_boolean, parse_price, parse_power, parse_torque
+from recommender_app.services.version_service import VersionService
+from recommender_app.services.brand_service import BrandService
+from recommender_app.services.model_service import ModelService
+from recommender_app.services.category_service import CategoryService
 
 
 url_base = "https://www.moto.it"
@@ -79,6 +83,8 @@ def extract_brand_infos(page: Page, brand: dict, browser):
     print(f"Processing brand: {brand['name']} - URL: {brand['url']}")
     models = []
 
+    save_brand_on_db(brand)
+
     cards_models_in_list = page.query_selector_all("div.plist-pcard")
 
     if not cards_models_in_list:
@@ -116,8 +122,6 @@ def extract_brand_infos(page: Page, brand: dict, browser):
         models.append(model)
         print(f"Model extracted: {model['name']} - URL: {model['url']} - Prices: {model['lower_price']} - {model['upper_price']} - Brand: {model['brand']}")
 
-        save_model_on_db(model)
-
     print(f"Found {len(models)} models for brand: {brand['name']}")
 
     for model in models:
@@ -125,9 +129,27 @@ def extract_brand_infos(page: Page, brand: dict, browser):
             
             versions = extract_model_versions(model, browser)
 
+            for version in versions:
+                if not version:
+                    print(f"No version data found for model: {model['name']}")
+                    continue
+
+                
+
+                save_version_on_db(version)
+
             if not versions:
                 print(f"No versions found for model: {model['name']}")
                 continue
+
+            model_data = {
+                "name": model['name'],
+                "brand": brand['name'],
+                "url": model['url'],
+                "lower_price": model['lower_price'],
+                "upper_price": model['upper_price'],
+                "versions": versions,
+            }
 
         except Exception as e:
             print(f"Error processing model {model['name']}: {e}")
@@ -269,16 +291,46 @@ def map_version_data(raw_data: dict) -> dict:
 
 
 def save_version_on_db(version_data: dict):
-    print(f"Saving version data to DB: {version_data}")
-    # Qui si dovrebbe implementare la logica per salvare i dati della versione nel database
+    version_service = VersionService()
+    dto = map_version_data(version_data)
+    if not dto:
+        print("No valid data to save.")
+        return
+    try:
+        version = version_service.create_version(dto)
+        print(f"Version saved: {version}")
+    except Exception as e:
+        print(f"Error saving version data: {e}")
+    
+    
 
 def save_brand_on_db(brand_data: dict):
-    print(f"Saving brand data to DB: {brand_data}")
-    # Qui si dovrebbe implementare la logica per salvare i dati del brand nel database
+    brand_service = BrandService()
+    try:
+        brand = brand_service.create_brand(brand_data)
+        print(f"Brand saved: {brand}")
+    except Exception as e:
+        print(f"Error saving brand data: {e}")
+    
 
 def save_model_on_db(model_data: dict):
-    print(f"Saving model data to DB: {model_data}")
-    # Qui si dovrebbe implementare la logica per salvare i dati del modello nel database
+    model_service = ModelService()
+    try:
+        model = model_service.create_model(model_data)
+        print(f"Model saved: {model}")
+    except Exception as e:
+        print(f"Error saving model data: {e}")
+
+def add_category_if_not_exists(category_name: str) -> int:
+    category_service = CategoryService()
+    
+    existing_category = category_service.get_category_by_name(category_name)
+    if existing_category:
+        return existing_category['id']
+    
+    new_category = category_service.create_category({"name": category_name})
+    return new_category['id']
+
 
 app = create_app()    
 
