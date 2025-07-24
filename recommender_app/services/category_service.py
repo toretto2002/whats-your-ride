@@ -5,11 +5,14 @@ class CategoryService:
     def __init__(self):
         self.category_repository = CategoryRepositoryImpl()
 
-    def create_category(self, category: dict) -> dict:
+    def create_category(self, category: dict) -> int:
         return self.category_repository.create(category)
 
     def get_category_by_id(self, category_id: int) -> dict:
         return self.category_repository.get_by_id(category_id)
+    
+    def get_category_by_name(self, name: str) -> dict:
+        return self.category_repository.get_by_name(name)
 
     def update_category(self, category_id: int, category_update: dict) -> dict:
         return self.category_repository.update(category_id, category_update)

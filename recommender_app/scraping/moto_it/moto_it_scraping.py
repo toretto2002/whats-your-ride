@@ -290,12 +290,13 @@ def map_version_data(raw_data: dict) -> dict:
     return mapped
 
 
-def save_version_on_db(version_data: dict):
+def save_version_on_db(version_data: dict) -> int:
     version_service = VersionService()
     dto = map_version_data(version_data)
     if not dto:
         print("No valid data to save.")
-        return
+        return -1
+
     try:
         version = version_service.create_version(dto)
         print(f"Version saved: {version}")
@@ -304,14 +305,15 @@ def save_version_on_db(version_data: dict):
     
     
 
-def save_brand_on_db(brand_data: dict):
+def save_brand_on_db(brand_data: dict) -> int:
     brand_service = BrandService()
     try:
-        brand = brand_service.create_brand(brand_data)
-        print(f"Brand saved: {brand}")
+        brand_id = brand_service.create_brand(brand_data)
+        print(f"Brand saved with id: {brand_id}")
+        return brand_id
     except Exception as e:
         print(f"Error saving brand data: {e}")
-    
+        return -1
 
 def save_model_on_db(model_data: dict):
     model_service = ModelService()

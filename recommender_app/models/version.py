@@ -9,7 +9,7 @@ class Version(db.Model):
     model_id = db.Column(db.Integer, db.ForeignKey('models.id'), nullable=False)
 
     # dati generali
-    name = db.Column(db.String(500), nullable=False)
+    name = db.Column(db.String(500), nullable=False, unique=True)
     year_start = db.Column(db.Integer)
     year_end = db.Column(db.Integer)
     price = db.Column(db.Float)

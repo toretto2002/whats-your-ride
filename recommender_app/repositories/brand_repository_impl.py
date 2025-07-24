@@ -10,9 +10,11 @@ class BrandRepositoryImpl(BrandRepository):
     def get_brand_by_name(self, name: str) -> Brand:
         return self.db_session.query(Brand).filter(Brand.name == name).first()
 
-    def save_brand(self, brand: Brand) -> None:
+    def save_brand(self, brand: Brand) -> int:
         self.db_session.add(brand)
         self.db_session.commit()
+        self.db_session.refresh(brand)
+        return brand.id
 
     def get_all_brands(self) -> List[Brand]:
         return self.db_session.query(Brand).all()

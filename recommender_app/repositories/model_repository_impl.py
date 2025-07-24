@@ -7,11 +7,13 @@ class ModelRepositoryImpl(ModelRepository):
     def __init__(self, db_session):
         self.db_session = db_session
 
-    def create_model(self, dto) -> None:
+    def create_model(self, dto) -> int:
         """Create a new model."""
         new_model = Model(**dto)
         self.db_session.add(new_model)
         self.db_session.commit()
+        self.db_session.refresh(new_model)
+        return new_model.id
 
     def get_model(self, model_id: int) -> Optional[Model]:
         """Get a model by its ID."""

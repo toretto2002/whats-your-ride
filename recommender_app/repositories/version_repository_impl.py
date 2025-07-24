@@ -7,10 +7,13 @@ class VersionRepositoryImpl(VersionRepository):
     def __init__(self, db_session):
         self.db_session = db_session
 
-    def create_version(self, dto) -> None:
+    def create_version(self, dto) -> int:
         version = Version(**dto)
         self.db_session.add(version)
         self.db_session.commit()
+        self.db_session.refresh(version)
+        return version.id
+        
 
     def get_version(self, version_id: int) -> Optional[Version]:
         return self.db_session.query(Version).filter(Version.id == version_id).first()
