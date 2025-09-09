@@ -37,9 +37,13 @@ class ModelRepositoryImpl(ModelRepository):
     def get_all_models(self) -> List[Model]:
         """Get all models."""
         return db.session.query(Model).all()
+    
+    def get_model_by_name(self, name):
+        """Get a model by its name."""
+        return db.session.query(Model).filter(Model.name == name).first()
 
     def get_or_create_model(self, model_data) -> int:
-        existing_model = db.session.query(Model).filter_by(name=model_data["name"]).first()
+        existing_model = self.get_model_by_name(model_data["name"])
         if existing_model:
             return existing_model.id  # usa l'id esistente
         model = Model(**model_data)

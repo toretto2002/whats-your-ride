@@ -21,3 +21,6 @@ class VersionService:
 
     def list_versions(self) -> list[VersionOut]:
         return self.version_repository.list_all()
+    
+    def get_or_create_version(self, version_data: dict) -> int:
+        return self.version_repository.get_or_create_version(version_data)

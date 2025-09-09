@@ -16,3 +16,9 @@ class BrandRepositoryImpl(BrandRepository):
 
     def get_all_brands(self) -> List[Brand]:
         return db.session.query(Brand).all()
+    
+    def get_or_create_brand(self, brand_data) -> int:
+        brand = self.get_brand_by_name(brand_data['name'])
+        if brand:
+            return brand.id
+        return self.save_brand(Brand(**brand_data))

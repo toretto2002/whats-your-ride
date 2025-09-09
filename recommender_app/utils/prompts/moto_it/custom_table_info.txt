@@ -1,0 +1,119 @@
+La tabella `versions` rappresenta le versioni specifiche di ogni modello di motocicletta e contiene i dati tecnici, ciclistici e generali. Essa è collegata tramite foreign key alla tabella `models`, che a sua volta è collegata a `brands` e `categories`.
+
+📌 JOIN raccomandate:
+- `versions.model_id = models.id`
+- `models.brand_id = brands.id`
+- `models.category_id = categories.id`
+
+---
+
+🔹 TABELLA `brands`
+Contiene le informazioni sulle case motociclistiche produttrici.
+- `id`: ID univoco del brand.
+- `name`: Nome del brand (es. Honda, Ducati).
+- `url`: URL alla pagina ufficiale del brand.
+
+---
+
+🔹 TABELLA `categories`
+Contiene le categorie delle motociclette.
+- `id`: ID univoco della categoria.
+- `name`: Nome categoria (es. Naked, Sportive, Touring).
+- `description`: Descrizione testuale della categoria.
+
+---
+
+🔹 TABELLA `models`
+Ogni record rappresenta un modello generico (es. Monster 937) che può avere più versioni.
+- `id`: ID del modello.
+- `name`: Nome del modello.
+- `brand_id`: ID del brand (join con `brands`).
+- `category_id`: ID della categoria (join con `categories`).
+- `lower_price`: Prezzo minimo tra le versioni.
+- `upper_price`: Prezzo massimo tra le versioni.
+
+---
+
+🔹 TABELLA `versions` (principale)
+Contiene i dati dettagliati per ciascuna versione specifica (es. Monster 937 Plus, Monster SP, ecc.)
+
+📌 INFORMAZIONI GENERALI:
+- `id`: ID della versione.
+- `model_id`: ID del modello (join con `models`).
+- `name`: Nome della versione.
+- `year_start`, `year_end`: Anni di produzione.
+- `price`: Prezzo suggerito.
+- `warranty`: Durata garanzia ufficiale.
+- `optional`: Accessori opzionali.
+
+📏 DIMENSIONI E PESI:
+- `length`, `width`, `height`: Dimensioni complessive (in mm).
+- `min_height_from_ground`: Altezza minima da terra.
+- `seat_height_min`, `seat_height_max`: Altezza minima e massima della sella.
+- `wheelbase`: Interasse.
+- `dry_weight`, `wet_weight`: Peso a secco e peso in ordine di marcia.
+
+⚙️ MOTORE:
+- `displacement`: Cilindrata (in cc).
+- `engine_type`: Tipo motore (es. bicilindrico, 4 tempi).
+- `stroke`: Numero di tempi.
+- `cylinders`: Numero di cilindri.
+- `cylinder_config`: Configurazione cilindri (es. in linea, V).
+- `cylinder_disposition`: Disposizione cilindri (es. trasversale).
+- `cylinder_inclination`, `cylinder_inclination_v`: Inclinazione cilindri.
+- `cooling`: Tipo raffreddamento (aria, liquido).
+- `starter`: Tipo avviamento (es. elettrico).
+- `fuel_system`: Tipo di alimentazione (es. iniezione).
+- `bore`, `stroke_length`: Alesaggio e corsa (in mm).
+- `clutch`: Tipo di frizione.
+- `valves`: Numero totale valvole.
+- `distribution`: Distribuzione (es. DOHC).
+- `ride_by_wire`: Presenza ride-by-wire (booleano).
+- `traction_control`: Presenza traction control (booleano).
+- `engine_maps`: Mappature motore disponibili.
+- `power_hp`, `power_rpm`: Potenza massima in cavalli e regime.
+- `torque_nm`, `torque_rpm`: Coppia massima e regime.
+- `emissions`: Normativa emissioni (es. Euro 5).
+- `depowered`: Versione depotenziata (booleano).
+- `gearbox_type`: Tipo di cambio.
+- `gears`: Numero di marce.
+- `reverse_gear`: Presenza retromarcia (booleano).
+- `average_consumption`: Consumo medio.
+- `fuel_capacity`: Capacità serbatoio (litri).
+- `final_drive`: Trasmissione finale (es. catena).
+
+🔧 CICLISTICA:
+- `frame_type`: Tipo di telaio.
+- `front_suspension`, `rear_suspension`: Tipo di sospensioni.
+- `front_travel`, `rear_travel`: Escursione sospensioni (mm).
+- `front_brake_type`, `rear_brake_type`: Tipi di freni.
+- `front_brake_size`, `rear_brake_size`: Diametro freni (mm).
+- `abs`: Presenza ABS (booleano).
+- `wheel_type`: Tipo ruote.
+- `front_wheel_size`, `rear_wheel_size`: Dimensione cerchi.
+- `front_tire`, `rear_tire`: Pneumatici.
+
+🔋 BATTERIA:
+- `battery`: Tipo batteria.
+- `battery_capacity`: Capacità (Ah o Wh).
+- `battery_life`: Autonomia dichiarata (per elettriche).
+- `secondary_battery`: Eventuale batteria secondaria.
+
+---
+
+🧠 Suggerimenti per l’agente LLM:
+- Quando un utente richiede una "marca", usa `brands.name`.
+- Quando chiede una "categoria", usa `categories.name`.
+- Quando specifica una fascia di prezzo, usa `price` oppure `lower_price`/`upper_price` del modello.
+- Quando richiede caratteristiche tecniche (es. potenza, altezza sella, peso), lavora su `versions`.
+- Escludi sempre i record in cui il valore richiesto è `NULL`.
+- Ricorda che `model.name` + `brand.name` danno il nome completo del modello.
+
+---
+
+🎯 Esempi di query supportate:
+- "Moto naked sotto i 180 kg e con sella bassa"
+- "Sportiva con almeno 100 cavalli prodotta dopo il 2022"
+- "Tourer per due passeggeri con serbatoio sopra i 20 litri"
+- "Moto depotenziata per patente A2 con ABS e traction control"
+

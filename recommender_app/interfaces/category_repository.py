@@ -26,3 +26,4 @@ class CategoryRepository(Protocol):
         """Get a category by its name."""
         pass
     
+    

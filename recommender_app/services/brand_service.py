@@ -23,6 +23,10 @@ class BrandService:
         if not brand:
             raise ValueError(f"Brand {name} does not exist.")
         return brand
+    
+    def get_or_create_brand(self, brand_data: dict) -> int:
+        """Get an existing brand or create a new one."""
+        return self.brand_repository.get_or_create_brand(brand_data)
 
 
 

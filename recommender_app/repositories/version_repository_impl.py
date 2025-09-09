@@ -36,3 +36,15 @@ class VersionRepositoryImpl(VersionRepository):
 
     def get_all_versions(self) -> List[Version]:
         return db.session.query(Version).all()
+    
+    def get_version_by_name(self, name: str) -> Optional[Version]:
+        return db.session.query(Version).filter(Version.name == name).first()
+    
+    def get_or_create_version(self, version_data: dict) -> int:
+        version = self.get_version_by_name(version_data['name'])
+        if version:
+            return version.id
+        new_version = Version(**version_data)
+        db.session.add(new_version)
+        db.session.commit()
+        return new_version.id

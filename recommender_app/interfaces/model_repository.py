@@ -23,6 +23,10 @@ class ModelRepository(Protocol):
         """Get all models."""
         pass
     
+    def get_model_by_name(self, name: str) -> Optional[Model]:
+        """Get a model by its name."""
+        pass
+    
     def get_or_create_model(self, model_data: dict) -> int:
         """Get an existing model or create a new one."""
         pass

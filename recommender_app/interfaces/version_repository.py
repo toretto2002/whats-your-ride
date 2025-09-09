@@ -22,3 +22,7 @@ class VersionRepository(Protocol):
     def get_all_versions(self) -> List[Version]:
         """Get all versions."""
         pass
+    
+    def get_version_by_name(self, name: str) -> Optional[Version]:
+        """Get a version by its name."""
+        pass

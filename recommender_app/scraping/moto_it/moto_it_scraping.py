@@ -40,17 +40,14 @@ def scrape_with_playwright():
                         "url": brand_link
                     })
 
-                
-
                 print(f"Brand found: {brand_name} - URL: {brand_link}")
-                break  # Limita a un brand per test
             
             except Exception as e:
                 print(f"Error processing brand element: {e}")
         
         browser.close()
 
-        with ThreadPoolExecutor(max_workers=1) as executor:
+        with ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(process_brand, brand) for brand in brands]
 
             for future in as_completed(futures):
@@ -71,6 +68,7 @@ def process_brand(brand: dict):
                 page.goto(url_base + brand['url'])
 
                 extract_brand_infos(page, brand, browser)
+                print(f"Brand {brand['name']} processed successfully.")
 
                 browser.close()
             except Exception as e:
@@ -78,7 +76,6 @@ def process_brand(brand: dict):
 
 
 def extract_brand_infos(page: Page, brand: dict, browser):
-    print(f"Processing brand: {brand['name']} - URL: {brand['url']}")
     models = []
 
     brand_id = save_brand_on_db(brand)
@@ -92,7 +89,8 @@ def extract_brand_infos(page: Page, brand: dict, browser):
     for card in cards_models_in_list:
         try:
             anchor = card.query_selector("a.app-set-model")
-            model_name = clean_model_name(anchor.text_content().strip()) if anchor else "Unknown Model"
+            model_text = anchor.text_content() if anchor else ""
+            model_name = clean_model_name((model_text or "").strip()) or "Unknown Model"
             versions_page_url = anchor.get_attribute("href") if anchor else None
             version_prizes_to_parse = card.query_selector("div.plist-pcard-price").text_content().strip()
 
@@ -118,9 +116,6 @@ def extract_brand_infos(page: Page, brand: dict, browser):
         }
 
         models.append(model)
-        print(f"Model extracted: {model['name']} - URL: {model['url']} - Prices: {model['lower_price']} - {model['upper_price']} - Brand: {model['brand']}")
-
-    print(f"Found {len(models)} models for brand: {brand['name']}")
 
     category_id = None
     versions_ids = []
@@ -224,8 +219,6 @@ def extract_model_versions(model, browser) -> list:
     else:
         versions_urls.append(model['url'])
 
-    print(f"Found {len(versions_urls)} versions for model: {model['name']}")
-
     for url in versions_urls:
         with model_page.context.new_page() as version_page:
             version = extract_version_data(version_page, url)
@@ -262,8 +255,6 @@ def extract_version_data(page, url):
     except Exception as e:
         print(f"Error extracting version data from {url}: {e}")
         return None
-    
-    pprint(f"Extracted version data: {data}")
 
     return data
 
@@ -279,13 +270,21 @@ def map_version_data(raw_data: dict) -> dict:
     mapped = {}
 
     for k, v in raw_data.items():
+        
+        if not k or not v:
+            continue
+        
         key = KEY_MAPPING.get(k.strip().lower())
         if not key:
-            print(f"Key '{k}' not found in mapping, skipping.")
             continue
 
-        # conversioni smart
-        clean_value = v.strip()
+        if isinstance(v, str):
+            clean_value = v.strip()
+        elif v is not None:
+            clean_value = str(v).strip()
+        else:
+            clean_value = ""
+
 
         if key.startswith("seat_height") or "travel" in key or "size" in key or "bore" in key or "stroke" in key or "weight" in key or "length" in key or "width" in key or "height" in key or "wheelbase" in key:
             mapped[key] = parse_mm(clean_value)
@@ -315,8 +314,7 @@ def save_version_on_db(version_data: dict) -> int:
         return -1
 
     try:
-        version = version_service.create_version(dto)
-        print(f"Version saved: {version}")
+        version = version_service.get_or_create_version(dto)
     except Exception as e:
         print(f"Error saving version data: {e}")
     
@@ -325,8 +323,7 @@ def save_version_on_db(version_data: dict) -> int:
 def save_brand_on_db(brand_data: dict) -> int:
     brand_service = BrandService()
     try:
-        brand_id = brand_service.get_brand_by_name(brand_data["name"]).id or brand_service.create_brand(brand_data)
-        print(f"Brand saved with id: {brand_id}")
+        brand_id = brand_service.get_or_create_brand(brand_data)
         return brand_id
     except Exception as e:
         print(f"Error saving brand data: {e}")
@@ -336,7 +333,6 @@ def save_model_on_db(model_data: dict):
     model_service = ModelService()
     try:
         model_id = model_service.get_or_create_model(model_data)
-        print(f"Model saved with id: {model_id}")
         return model_id
     except Exception as e:
         print(f"Error saving model data: {e}")
