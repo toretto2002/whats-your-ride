@@ -7,12 +7,15 @@ from recommender_app.db_ses.session import llama_engine
 from llama_index.embeddings.openai import OpenAIEmbedding
 from recommender_app.core.config import Config  # dove hai messo la OPENAI_API_KEY
 from recommender_app.utils.file_loader import load_prompt
+from recommender_app.services.session_service import SessionService
 
 class MotoItOpenAiBotService:
     def __init__(self):
         # Logging
         logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
         self.logger = logging.getLogger(__name__)
+        self.session_service = SessionService()
+
 
         # ChatGPT LLM (via llama-index)
         self.llm = LlamaOpenAI(
@@ -41,7 +44,7 @@ class MotoItOpenAiBotService:
             system_prompt = load_prompt("utils/prompts/moto_it/system_prompt.txt")
         )
 
-    def ask(self, data):
+    def ask(self, data, session_id: int | None = None) -> str | dict:
         try:
             query = self.query_engine.retriever.retrieve(data)[0].raw_query
             logging.debug(f"Generated SQL Query: {query}")
@@ -49,8 +52,19 @@ class MotoItOpenAiBotService:
             logging.error(f"SQL Error: {e}")
 
         try:
+            
             response = self.query_engine.query(data)
-            return str(response)
+
+            if not session_id:
+                user_id = 1  # Recupera l'ID dell'utente da qualche parte
+                session_id = self.session_service.create_session(user_id=user_id)
+
+           
+            self.session_service.append_message(session_id, data, sender="user")
+            self.session_service.append_message(session_id, str(response), sender="bot")
+    
+            
+            return {"res": str(response), "session_id": session_id}
         except Exception as e:
             logging.error(f"Execution Error: {e}")
             return {"error": str(e)}

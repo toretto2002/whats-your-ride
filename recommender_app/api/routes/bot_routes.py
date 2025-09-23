@@ -45,11 +45,13 @@ def handle_openai_bot_request():
 def handle_moto_it_bot_request():
     data = request.get_json()
     message = data.get("message")
+    session_id = data.get("session_id")  # parametro opzionale
+
     if not message:
         return jsonify({"error": "Messaggio mancante"}), 400
     
     try:
-        response = moto_it_open_ai_bot_service.ask(message)
-        return jsonify({"answer": response})
+        response = moto_it_open_ai_bot_service.ask(message, session_id=session_id)
+        return jsonify({"answer": response.get("res"), "session_id": response.get("session_id")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500  
