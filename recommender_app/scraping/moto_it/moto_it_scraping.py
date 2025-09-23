@@ -22,6 +22,8 @@ def scrape_with_playwright():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
+        page.set_default_timeout(180000)  # Timeout di default per tutte le operazioni (30s)
+        page.set_default_navigation_timeout(180000)  # Timeout di default per le navigazioni (60s)
         page.goto(url_base + "/listino/")
         brand_elements = page.query_selector_all("span.plist-bcard-content")
         brands = []
@@ -47,7 +49,7 @@ def scrape_with_playwright():
         
         browser.close()
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             futures = [executor.submit(process_brand, brand) for brand in brands]
 
             for future in as_completed(futures):
@@ -65,6 +67,8 @@ def process_brand(brand: dict):
             try:
                 browser = p.chromium.launch(headless=True)
                 page = browser.new_page()
+                page.set_default_timeout(180000)
+                page.set_default_navigation_timeout(180000)
                 page.goto(url_base + brand['url'])
 
                 extract_brand_infos(page, brand, browser)
@@ -193,6 +197,8 @@ def extract_model_versions(model, browser) -> list:
 
     context = browser.new_context()
     model_page = context.new_page()
+    model_page.set_default_timeout(180000)
+    model_page.set_default_navigation_timeout(180000)
     model_page.goto(url_base + model['url'])
     model_page.wait_for_selector("body")
 
@@ -221,6 +227,8 @@ def extract_model_versions(model, browser) -> list:
 
     for url in versions_urls:
         with model_page.context.new_page() as version_page:
+            version_page.set_default_timeout(180000)
+            version_page.set_default_navigation_timeout(180000)
             version = extract_version_data(version_page, url)
 
             if not version:
