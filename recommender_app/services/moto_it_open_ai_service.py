@@ -8,6 +8,8 @@ from llama_index.embeddings.openai import OpenAIEmbedding
 from recommender_app.core.config import Config  # dove hai messo la OPENAI_API_KEY
 from recommender_app.utils.file_loader import load_prompt
 from recommender_app.services.session_service import SessionService
+from recommender_app.schemas.version_query_result import VersionQueryResult
+from typing import Any
 
 class MotoItOpenAiBotService:
     def __init__(self):
@@ -44,27 +46,83 @@ class MotoItOpenAiBotService:
             system_prompt = load_prompt("utils/prompts/moto_it/system_prompt.txt")
         )
 
-    def ask(self, data, session_id: int | None = None) -> str | dict:
-        try:
-            query = self.query_engine.retriever.retrieve(data)[0].raw_query
-            logging.debug(f"Generated SQL Query: {query}")
-        except Exception as e:
-            logging.error(f"SQL Error: {e}")
+    def ask(self, message: str, session_id: int | None = None) -> dict:
+        if not session_id:
+            # TODO: recuperare l'ID reale dell'utente autenticato quando disponibile
+            user_id = 1
+            session_id = self.session_service.create_session(user_id=user_id)
+
+        self.session_service.append_message(session_id, message, sender="user")
+
+        sql_query = None
+        rows: list[dict] = []
 
         try:
-            
-            response = self.query_engine.query(data)
+            retrievals = self.query_engine.retrieve(message)
+            if retrievals:
+                sql_query = retrievals[0].raw_query
+                logging.debug(f"Generated SQL Query: {sql_query}")
+        except Exception as exc:
+            logging.error(f"SQL retrieval error: {exc}")
 
-            if not session_id:
-                user_id = 1  # Recupera l'ID dell'utente da qualche parte
-                session_id = self.session_service.create_session(user_id=user_id)
+        if sql_query:
+            rows = self._execute_sql_query(sql_query)
 
-           
-            self.session_service.append_message(session_id, data, sender="user")
-            self.session_service.append_message(session_id, str(response), sender="bot")
-    
-            
-            return {"res": str(response), "session_id": session_id}
-        except Exception as e:
-            logging.error(f"Execution Error: {e}")
-            return {"error": str(e)}
+        answer = ""
+        try:
+            response = self.query_engine.query(message)
+            answer = str(response)
+        except Exception as exc:
+            logging.error(f"Response generation error: {exc}")
+            return {
+                'session_id': session_id,
+                'sql_query': sql_query,
+                'rows': rows,
+                'answer': answer,
+                'error': str(exc)
+            }
+
+        self.session_service.append_message(session_id, answer, sender="bot")
+
+        return {
+            'session_id': session_id,
+            'sql_query': sql_query,
+            'rows': rows,
+            'answer': answer
+        }
+
+    def _execute_sql_query(self, sql_query: str) -> list[dict]:
+        structured_rows: list[dict] = []
+        try:
+            result = self.sql_database.run_sql(sql_query)
+            for row in result:
+                row_dict = self._row_to_dict(row)
+                structured_rows.append(self._structure_row(row_dict))
+        except Exception as exc:
+            logging.error(f"SQL execution error: {exc}")
+        return structured_rows
+
+    @staticmethod
+    def _row_to_dict(row: Any) -> dict:
+        if hasattr(row, '_mapping'):
+            return dict(row._mapping)
+        if isinstance(row, dict):
+            return dict(row)
+        try:
+            return dict(row)
+        except (TypeError, ValueError):
+            return {'value': row}
+
+    @staticmethod
+    def _structure_row(row_dict: dict) -> dict:
+        lower_map = {k.lower(): v for k, v in row_dict.items() if isinstance(k, str)}
+        data = {'raw': row_dict}
+        for field_name in VersionQueryResult.model_fields:
+            if field_name == 'raw':
+                continue
+            if field_name in row_dict:
+                data[field_name] = row_dict[field_name]
+            elif field_name in lower_map:
+                data[field_name] = lower_map[field_name]
+        return VersionQueryResult(**data).model_dump()
+

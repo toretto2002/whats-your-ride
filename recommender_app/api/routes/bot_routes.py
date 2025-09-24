@@ -52,6 +52,8 @@ def handle_moto_it_bot_request():
     
     try:
         response = moto_it_open_ai_bot_service.ask(message, session_id=session_id)
-        return jsonify({"answer": response.get("res"), "session_id": response.get("session_id")})
+        if response.get("error"):
+            return jsonify(response), 500
+        return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)}), 500  

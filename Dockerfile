@@ -1,18 +1,14 @@
-FROM python:3.13
+FROM python:3.12-slim-bookworm
 
-# Install Poetry
-RUN pip install poetry
+# Install Poetry + debugpy
+RUN pip install --no-cache-dir poetry debugpy
 
-# Set workdir
 WORKDIR /app
 
-# Copy dependency files
 COPY pyproject.toml poetry.lock* README.md /app/
-
-# Copy package folder BEFORE poetry install (only what's needed)
 COPY recommender_app /app/recommender_app
 
-# Installa dipendenze per Playwright headless browsers
+# Playwright deps (come in origine)
 RUN apt-get update && \
     apt-get install -y wget gnupg ca-certificates && \
     apt-get install -y \
@@ -32,20 +28,22 @@ RUN apt-get update && \
         libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-
-# Install deps and package
 RUN poetry config virtualenvs.create false \
   && poetry lock \
   && poetry install --no-interaction --no-ansi
 
-# Install Playwright and its dependencies
 RUN playwright install --with-deps
 
-
-# Copy the rest (e.g. tests, scripts)
 COPY . /app
+COPY docker/entrypoint.sh /app/docker/entrypoint.sh
+
+RUN chmod +x /app/docker/entrypoint.sh
 
 ENV FLASK_APP=run
 ENV FLASK_RUN_HOST=0.0.0.0
+ENV FLASK_RUN_PORT=5000
+ENV DEBUG_PORT=5678
 
-CMD ["flask", "run"]
+EXPOSE 5000 5678
+
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
