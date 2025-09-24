@@ -23,4 +23,4 @@ class CategoryService:
         return self.category_repository.delete(category_id)
 
     def list_categories(self) -> list[CategoryOut]:
-        return self.category_repository.list_all()
+        return self.category_repository.list_categories()

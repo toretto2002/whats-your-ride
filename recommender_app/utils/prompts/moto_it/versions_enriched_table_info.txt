@@ -1,0 +1,17 @@
+﻿La vista `versions_enriched` contiene tutti i dati necessari per rispondere alle richieste degli utenti senza dover effettuare join manuali.
+
+Colonne principali:
+- Identificativi: version_id, model_id, brand_id, category_id.
+- Nomi: version_name, model_name, brand_name, category_name.
+- Cronologia e prezzo: year_start, year_end, price, warranty, optional, model_lower_price, model_upper_price.
+- Motore e prestazioni: displacement, power_hp, power_rpm, torque_nm, torque_rpm, engine_type, cooling, ride_by_wire, traction_control, abs, depowered, gearbox_type, gears, final_drive, average_consumption, fuel_capacity, top_speed.
+- Dimensioni e pesi: dry_weight, wet_weight, seat_height_min, seat_height_max, wheelbase, length, width, height, min_height_from_ground.
+- Ciclistica: frame_type, front_suspension, front_travel, rear_suspension, rear_travel, front_brake_type, front_brake_size, rear_brake_type, rear_brake_size, wheel_type, front_wheel_size, rear_wheel_size, front_tire, rear_tire.
+- Elettronica/batteria: battery, battery_capacity, battery_life, secondary_battery, engine_maps, starter.
+
+Regole da ricordare:
+- Usa sempre `SELECT * FROM versions_enriched ...` per ottenere il set completo di colonne.
+- Quando filtri per marchio, modello o categoria confronta rispettivamente brand_name, model_name, category_name.
+- Le stringhe vanno confrontate in modo case-insensitive (`LOWER(col) = LOWER('valore')` oppure `ILIKE`).
+- Evita filtri su colonne non presenti in questa vista.
+- Se ti servono dati aggregati (es. media peso), puoi usare funzioni SQL direttamente sulla vista.
