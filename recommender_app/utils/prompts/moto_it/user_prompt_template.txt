@@ -1,0 +1,17 @@
+OMANDA_UTENTE:
+{user_question}
+
+SQL_ESEGUITO:
+{sql_query}
+
+CONTEXT_HISTORY (riassunto):
+{history_summary}
+
+RESULTS (JSON):
+{results_json}
+
+Linee guida di stile:
+- Limita la tabella a {max_table_rows} righe.
+- Usa kg/hp/Nm/cc/€ come unità.
+- Cita i modelli con [_evidence_id] quando affermi qualcosa di specifico.
+- Se le categorie dell’utente erano vaghe, spiega brevemente come sono state interpretate (solo se utile).

@@ -1,4 +1,5 @@
-﻿import logging
+﻿import json
+import logging
 import re
 from llama_index.core import Settings
 from llama_index.llms.openai import OpenAI as LlamaOpenAI
@@ -11,6 +12,7 @@ from recommender_app.core.config import Config  # dove hai messo la OPENAI_API_K
 from recommender_app.utils.file_loader import load_prompt
 from recommender_app.services.session_service import SessionService
 from recommender_app.services.category_service import CategoryService
+from recommender_app.services.answer_bot_service import AnswerBotService
 from recommender_app.schemas.version_query_result import VersionQueryResult
 from sqlalchemy import text
 
@@ -40,6 +42,8 @@ FIELD_ALIAS_MAP = {
     'wet_weight': 'wet_weight',
 }
 
+TOP_TABLE_ROWS = 25
+
 
 class MotoItOpenAiBotService:
     def __init__(self):
@@ -48,13 +52,14 @@ class MotoItOpenAiBotService:
         self.logger = logging.getLogger(__name__)
         self.session_service = SessionService()
         self.category_service = CategoryService()
+        self.answer_bot_service = AnswerBotService()
 
 
         # ChatGPT LLM (via llama-index)
         self.llm = LlamaOpenAI(
             api_key=Config.OPENAI_API_KEY,
             model="gpt-4o",  # oppure "gpt-3.5-turbo"
-            temperature=0.7
+            temperature=0.5
         )
 
         # Embedding model OpenAI
@@ -87,6 +92,43 @@ class MotoItOpenAiBotService:
             llm=self.llm,
             system_prompt= load_prompt("utils/prompts/moto_it/system_prompt.txt"),
         )
+
+    def _synthesize_answer(self, user_message: str, sql_query: str, rows: list[dict], session_id: int) -> str:
+        # Use the AnswerBotService to generate a synthesized answer
+        history_msgs = self.session_service.get_messages(session_id)
+        history_summary = self.answer_bot_service.summarize_history(history_msgs)
+        
+        results_payload = self.answer_bot_service.compress_results(rows, user_message)
+        results_json = json.dumps(results_payload, indent=2, ensure_ascii=False)
+        
+        prompt = load_prompt("utils/prompts/moto_it/answer_synthesis_prompt.txt")
+        prompt = prompt.format(
+            user_question=user_message,
+            sql_query=sql_query or "N/A",
+            history_summary=history_summary,
+            results_json=results_json,
+            max_table_rows=TOP_TABLE_ROWS
+        )
+        
+        answer_llm = LlamaOpenAI(
+            api_key=Config.OPENAI_API_KEY,
+            model="gpt-4o",  # oppure "gpt-3.5-turbo"
+            temperature=0.5
+        )
+        
+        try:
+            completion = answer_llm.chat(
+                messages=[
+                    {"role": "system", "content": load_prompt("utils/prompts/moto_it/answer_bot_system_prompt.txt")},
+                    {"role": "user", "content": user_message},
+                ]
+            )
+            
+            return completion.message.content.strip()
+        
+        except Exception as exc:
+            logging.error(f"LLM prediction error: {exc}")
+            return "Sorry, I encountered an error while generating the answer."
 
     def ask(self, message: str, session_id: int | None = None) -> dict:
         
@@ -128,13 +170,11 @@ class MotoItOpenAiBotService:
             rows = self._execute_sql_query(sql_query)
 
         answer = ""
-        
         if rows:
-            try:
-                answer = self.llm.predict(f"Given the following data rows: {rows}\nAnswer the user's question: {message}")
-            except Exception as exc:
-                logging.error(f"LLM prediction error: {exc}")
-                answer = "Sorry, I encountered an error while generating the answer."
+            answer = self._synthesize_answer(message, sql_query, rows, session_id)
+        else:
+            # fallback sensato quando 0 risultati
+            answer = self._synthesize_answer(message, sql_query, [], session_id)
 
         self.session_service.append_message(session_id, answer, sender="bot")
 
@@ -162,7 +202,7 @@ class MotoItOpenAiBotService:
         base_prompt = load_prompt("utils/prompts/moto_it/system_prompt.txt")
         categories = CategoryService().list_categories()
         names = ", ".join(cat.name for cat in categories)
-        return f"{base_prompt}\nLe uniche categorie valide sono: {names}. Quando applichi un filtro su category_name devi usare esattamente uno di questi valori (case insensitive); se l’utente usa sinonimi, scegli il valore più vicino nella lista. Le categorie se un utente chiede moto Sportive includi la categoria Sportive e Supersportive"
+        return base_prompt.replace("[PROMPT PER CATEGORIE]", f"Le uniche categorie valide sono: {names}. Quando applichi un filtro su category_name devi usare ESATTAMENTE una di queste stringhe, uguale lettera per lettera; se l’utente usa sinonimi, scegli il valore più vicino dalla lista di categorie che ti ho fornito. Se sei in dubbio tra piu categorie includile TUTTE nel filtro.")
 
     @staticmethod
     def _structure_row(row_dict: dict) -> dict:
