@@ -1,13 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from datetime import datetime
+
 
 class MessageCreate(BaseModel):
-    session_id: int
+    chat_session_id: int
     sender: str 
     message: str
-    timestamp: str  
+    timestamp: datetime
     
 class MessageOut(MessageCreate):
     id: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

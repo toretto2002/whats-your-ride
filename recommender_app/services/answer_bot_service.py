@@ -14,15 +14,22 @@ class AnswerBotService:
         È una funzione euristica: semplice, veloce, senza usare embeddings o modelli ML, ma utile per ordinare i risultati più probabili.
         Score the relevance of a database row to a given question.
         """
-        text = " ".join(str(row.get(k, "")) for k in ["brand_name", "model_name", "version_name", "category_name"]).lower()
+        m = row._mapping if hasattr(row, "_mapping") else row
+
+        text = " ".join(str(m.get(k, "")) for k in ["brand", "model", "version", "category", "power_hp", "torque_nm", "dry_weight", "wet_weight", "displacement", "price", "seat_height_min", "seat_height_max"]).lower()
+        
         user_message = message.lower()
         key_words_count = 0
         
         for token in user_message.split():
-            if token in text:
+            if token.lower() in text.lower():
                 key_words_count += 1
                 
-        num_bonus = sum(1 for field in self.NUMERIC_FIELDS if field in row.get(field) not in [None, "", 0])
+        num_bonus = 0
+        for field in self.NUMERIC_FIELDS:
+            value = row.get(field)
+            if value not in (None, "", 0):
+                num_bonus += 1
         
         return key_words_count + (0.1 * num_bonus)
     

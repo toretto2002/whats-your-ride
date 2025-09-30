@@ -96,8 +96,9 @@ class MotoItOpenAiBotService:
     def _synthesize_answer(self, user_message: str, sql_query: str, rows: list[dict], session_id: int) -> str:
         # Use the AnswerBotService to generate a synthesized answer
         history_msgs = self.session_service.get_messages(session_id)
-        history_summary = self.answer_bot_service.summarize_history(history_msgs)
-        
+        history_msgs_dict = [m.model_dump() for m in history_msgs]
+        history_summary = self.answer_bot_service.summarize_history(history_msgs_dict)
+
         results_payload = self.answer_bot_service.compress_results(rows, user_message)
         results_json = json.dumps(results_payload, indent=2, ensure_ascii=False)
         
