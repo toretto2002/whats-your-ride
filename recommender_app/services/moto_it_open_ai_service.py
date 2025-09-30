@@ -89,11 +89,11 @@ class MotoItOpenAiBotService:
             system_prompt = load_prompt("utils/prompts/moto_it/system_prompt.txt")
         )
         
-        self.retriever = NLSQLRetriever(
-            sql_database=self.sql_database,
-            llm=self.llm,
-            system_prompt= load_prompt("utils/prompts/moto_it/system_prompt.txt"),
-        )
+        # self.retriever = NLSQLRetriever(
+        #     sql_database=self.sql_database,
+        #     llm=self.llm,
+        #     system_prompt= load_prompt("utils/prompts/moto_it/system_prompt.txt"),
+        # )
 
     def _retry_with_backoff(self, func, max_retries=3, base_delay=1, use_fallback_model=False):
         """Esegue una funzione con retry exponential backoff per gestire rate limits"""
@@ -120,8 +120,7 @@ class MotoItOpenAiBotService:
         history_summary = self.answer_bot_service.summarize_history(history_msgs_dict)
 
         # Limita i risultati e compatta il payload per ridurre i token
-        limited_rows = rows[:TOP_TABLE_ROWS] if len(rows) > TOP_TABLE_ROWS else rows
-        results_payload = self.answer_bot_service.compress_results(limited_rows, user_message)
+        results_payload = self.answer_bot_service.compress_results(rows, user_message)
         # Invia al modello solo info compatte: tabella, statistiche e gruppi (niente 'rows' complete)
         compact_payload = {
             "table": results_payload.get("table", []),
@@ -252,21 +251,15 @@ class MotoItOpenAiBotService:
 
     def _execute_sql_query(self, sql_query: str) -> list[dict]:
         structured_rows: list[dict] = []
+        
         try:
-            # Aggiungi LIMIT se non presente per evitare troppi risultati
-            if not re.search(r'\bLIMIT\b', sql_query, re.IGNORECASE):
-                sql_query = f"{sql_query} LIMIT {TOP_TABLE_ROWS * 2}"  # Doppio del limite per avere margine
-            
+                        
             with self.sql_database.engine.connect() as connection:
                 result = connection.execute(text(sql_query))
                 columns = list(result.keys())
                 for raw_row in result:
                     row_dict = dict(zip(columns, raw_row))
                     structured_rows.append(self._structure_row(row_dict))
-                    
-                # Limita comunque i risultati in memoria
-                if len(structured_rows) > TOP_TABLE_ROWS:
-                    structured_rows = structured_rows[:TOP_TABLE_ROWS]
                     
         except Exception as exc:
             logging.error(f"SQL execution error: {exc}")
@@ -275,8 +268,8 @@ class MotoItOpenAiBotService:
     def _build_retriever_prompt(self) -> str:
         base_prompt = load_prompt("utils/prompts/moto_it/system_prompt.txt")
         categories = CategoryService().list_categories()
-        names = ", ".join(cat.name for cat in categories)
-        return base_prompt.replace("[PROMPT PER CATEGORIE]", f"Le uniche categorie valide sono: {names}. Quando applichi un filtro su category_name devi usare ESATTAMENTE una di queste stringhe, uguale lettera per lettera; se l’utente usa sinonimi, scegli il valore più vicino dalla lista di categorie che ti ho fornito. Se sei in dubbio tra piu categorie includile TUTTE nel filtro.")
+        names = "- ".join((f"{cat.id}={cat.name}\n") for cat in categories)
+        return base_prompt.replace("[CATEGORY LIST]", f"{names}")
 
     @staticmethod
     def _structure_row(row_dict: dict) -> dict:

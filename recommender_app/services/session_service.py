@@ -34,10 +34,12 @@ class SessionService:
         session.messages.append(message)
         self.session_repository.update_session(session)
         
-    def get_messages(self, session_id: int) -> list[MessageOut]:
+    def get_messages(self, session_id: int, limit: int = 10) -> list[MessageOut]:
         session = self.session_repository.get_session_by_id(session_id)
         
         if not session:
             raise ValueError(f"Session with ID {session_id} does not exist.")
         
-        return [MessageOut.from_orm(m) for m in session.messages]
+        # Fetch at most `limit` messages from the repository (ordered by timestamp ASC there)
+        messages = self.session_repository.get_history(session_id, limit=limit)
+        return [MessageOut.from_orm(m) for m in messages]

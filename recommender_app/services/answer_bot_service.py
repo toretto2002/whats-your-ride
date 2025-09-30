@@ -1,8 +1,8 @@
 
 
 class AnswerBotService:
-    MAX_ROWS_FOR_MODEL = 120
-    TOP_TABLE_ROWS = 10
+    MAX_ROWS_FOR_MODEL = 240
+    TOP_TABLE_ROWS = 50
     NUMERIC_FIELDS = ["power_hp", "torque_nm", "dry_weight", "wet_weight", "displacement", "price", "seat_height_min", "seat_height_max"]
 
     def __init__(self):
@@ -79,18 +79,31 @@ class AnswerBotService:
             if category:
                 groups["by_category"][category] = groups["by_category"].get(category, 0) + 1
         
-        table_fields = ["brand_name", "model_name", "version_name", "year_start", "year_end", "category_name", "displacement", "power_hp", "torque_nm", "dry_weight", "wet_weight", "price"]               
-                
+        # Ordina i risultati per displacement in ordine decrescente (mancanti/non numerici in fondo)
+        def _to_float(x):
+            try:
+                return float(x)
+            except (TypeError, ValueError):
+                return float('-inf')
+
+        sorted_by_displacement = sorted(
+            ranked,
+            key=lambda r: _to_float(r.get("displacement")),
+            reverse=True,
+        )
+
+        table_fields = ["brand", "model", "version", "year_start", "year_end", "category_name", "displacement", "power_hp", "torque_nm", "dry_weight", "wet_weight", "price"]               
+
         table = [
             {k: r.get(k) for k in table_fields} 
-            for r in ranked[:self.TOP_TABLE_ROWS]
+            for r in sorted_by_displacement
         ]
         
-        for r in ranked:
-            r["_evidence_id"] = f"{r.get('brand_name','?')}|{r.get('model_name','?')}|{r.get('version_name','?')}"
+        for r in sorted_by_displacement:
+            r["_evidence_id"] = f"{r.get('brand','?')}|{r.get('model','?')}|{r.get('version','?')}"
         
         return {
-            "rows": ranked,
+            "rows": sorted_by_displacement,
             "table": table,
             "stats": stats,
             "groups": groups

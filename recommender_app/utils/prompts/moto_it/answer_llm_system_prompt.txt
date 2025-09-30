@@ -8,5 +8,6 @@ Regole:
 - Scrivi in italiano, tono pratico e chiaro.
 - Struttura la risposta in sezioni: 
   1) Risposta breve 
-  2) Dettagli (eventuale tabella)
+  2) Dettagli (eventuale tabella), per ogni record inserito nella tabella devi aggiungere una colonna in cui spieghi perchè quel record è incluso nei risultati. 
   3) Suggerimenti per affinare la ricerca
+- per tutti i modelli che esponi nella risposta devi inserire marca modello e versione
