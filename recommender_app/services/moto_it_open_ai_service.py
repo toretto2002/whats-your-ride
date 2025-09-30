@@ -1,8 +1,10 @@
 ﻿import json
 import logging
 import re
+import time
 from llama_index.core import Settings
 from llama_index.llms.openai import OpenAI as LlamaOpenAI
+from llama_index.core.llms import ChatMessage
 from llama_index.core.query_engine import NLSQLTableQueryEngine
 from llama_index.core.retrievers import NLSQLRetriever
 from llama_index.core import SQLDatabase
@@ -42,7 +44,7 @@ FIELD_ALIAS_MAP = {
     'wet_weight': 'wet_weight',
 }
 
-TOP_TABLE_ROWS = 25
+TOP_TABLE_ROWS = 10  # Ridotto da 25 a 10 per evitare rate limits
 
 
 class MotoItOpenAiBotService:
@@ -93,16 +95,43 @@ class MotoItOpenAiBotService:
             system_prompt= load_prompt("utils/prompts/moto_it/system_prompt.txt"),
         )
 
+    def _retry_with_backoff(self, func, max_retries=3, base_delay=1, use_fallback_model=False):
+        """Esegue una funzione con retry exponential backoff per gestire rate limits"""
+        for attempt in range(max_retries):
+            try:
+                return func()
+            except Exception as e:
+                error_msg = str(e)
+                if "rate_limit_exceeded" in error_msg or "429" in error_msg:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)  # Exponential backoff
+                        self.logger.warning(f"Rate limit hit, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                    elif use_fallback_model:
+                        self.logger.warning("Rate limit exceeded, falling back to GPT-3.5-turbo")
+                        raise Exception("FALLBACK_TO_GPT35")
+                raise e
+
     def _synthesize_answer(self, user_message: str, sql_query: str, rows: list[dict], session_id: int) -> str:
         # Use the AnswerBotService to generate a synthesized answer
         history_msgs = self.session_service.get_messages(session_id)
         history_msgs_dict = [m.model_dump() for m in history_msgs]
         history_summary = self.answer_bot_service.summarize_history(history_msgs_dict)
 
-        results_payload = self.answer_bot_service.compress_results(rows, user_message)
-        results_json = json.dumps(results_payload, indent=2, ensure_ascii=False)
+        # Limita i risultati e compatta il payload per ridurre i token
+        limited_rows = rows[:TOP_TABLE_ROWS] if len(rows) > TOP_TABLE_ROWS else rows
+        results_payload = self.answer_bot_service.compress_results(limited_rows, user_message)
+        # Invia al modello solo info compatte: tabella, statistiche e gruppi (niente 'rows' complete)
+        compact_payload = {
+            "table": results_payload.get("table", []),
+            "stats": results_payload.get("stats", {}),
+            "groups": results_payload.get("groups", {}),
+        }
+        # JSON compatto senza indentazioni
+        results_json = json.dumps(compact_payload, separators=(",", ":"), ensure_ascii=False)
         
-        prompt = load_prompt("utils/prompts/moto_it/answer_llm_system_prompt.txt")
+        prompt = load_prompt("utils/prompts/moto_it/user_prompt_template.txt")
         prompt = prompt.format(
             user_question=user_message,
             sql_query=sql_query or "N/A",
@@ -111,23 +140,55 @@ class MotoItOpenAiBotService:
             max_table_rows=TOP_TABLE_ROWS
         )
         
+        # Log della lunghezza del prompt per monitorare i token
+        prompt_length = len(prompt)
+        self.logger.info(f"Prompt length: {prompt_length} characters, estimated tokens: ~{prompt_length // 4}")
+        if prompt_length > 120000:  # ~30k tokens
+            self.logger.warning(f"Large prompt detected ({prompt_length} chars), may hit rate limits")
+        
         answer_llm = LlamaOpenAI(
             api_key=Config.OPENAI_API_KEY,
             model="gpt-4o",  # oppure "gpt-3.5-turbo"
             temperature=0.5
         )
         
-        try:
-            completion = answer_llm.chat(
+        def _make_llm_call():
+            return answer_llm.chat(
                 messages=[
-                    {"role": "system", "content": load_prompt("utils/prompts/moto_it/answer_bot_system_prompt.txt")},
-                    {"role": "user", "content": user_message},
+                    ChatMessage(role="system", content=load_prompt("utils/prompts/moto_it/answer_llm_system_prompt.txt")),
+                    ChatMessage(role="user", content=prompt),
                 ]
             )
-            
+        
+        try:
+            completion = self._retry_with_backoff(_make_llm_call, max_retries=3, base_delay=2, use_fallback_model=True)
             return completion.message.content.strip()
         
         except Exception as exc:
+            if str(exc) == "FALLBACK_TO_GPT35":
+                # Prova con GPT-3.5-turbo
+                try:
+                    fallback_llm = LlamaOpenAI(
+                        api_key=Config.OPENAI_API_KEY,
+                        model="gpt-3.5-turbo",
+                        temperature=0.5
+                    )
+                    
+                    def _make_fallback_call():
+                        return fallback_llm.chat(
+                            messages=[
+                                ChatMessage(role="system", content=load_prompt("utils/prompts/moto_it/answer_llm_system_prompt.txt")),
+                                ChatMessage(role="user", content=prompt),
+                            ]
+                        )
+                    
+                    completion = self._retry_with_backoff(_make_fallback_call, max_retries=2, base_delay=1)
+                    return completion.message.content.strip()
+                
+                except Exception as fallback_exc:
+                    logging.error(f"Fallback LLM prediction error: {fallback_exc}")
+                    return "Sorry, I encountered an error while generating the answer."
+            
             logging.error(f"LLM prediction error: {exc}")
             return "Sorry, I encountered an error while generating the answer."
 
@@ -153,7 +214,10 @@ class MotoItOpenAiBotService:
         rows: list[dict] = []
 
         try:
-            retrievals = self.retriever.retrieve(message)
+            def _make_retrieval_call():
+                return self.retriever.retrieve(message)
+            
+            retrievals = self._retry_with_backoff(_make_retrieval_call, max_retries=3, base_delay=2)
             if retrievals:
                 node = retrievals[0]
                 metadata = getattr(node, 'metadata', {}) or {}
@@ -189,12 +253,21 @@ class MotoItOpenAiBotService:
     def _execute_sql_query(self, sql_query: str) -> list[dict]:
         structured_rows: list[dict] = []
         try:
+            # Aggiungi LIMIT se non presente per evitare troppi risultati
+            if not re.search(r'\bLIMIT\b', sql_query, re.IGNORECASE):
+                sql_query = f"{sql_query} LIMIT {TOP_TABLE_ROWS * 2}"  # Doppio del limite per avere margine
+            
             with self.sql_database.engine.connect() as connection:
                 result = connection.execute(text(sql_query))
                 columns = list(result.keys())
                 for raw_row in result:
                     row_dict = dict(zip(columns, raw_row))
                     structured_rows.append(self._structure_row(row_dict))
+                    
+                # Limita comunque i risultati in memoria
+                if len(structured_rows) > TOP_TABLE_ROWS:
+                    structured_rows = structured_rows[:TOP_TABLE_ROWS]
+                    
         except Exception as exc:
             logging.error(f"SQL execution error: {exc}")
         return structured_rows

@@ -2,7 +2,7 @@
 
 class AnswerBotService:
     MAX_ROWS_FOR_MODEL = 120
-    TOP_TABLE_ROWS = 25
+    TOP_TABLE_ROWS = 10
     NUMERIC_FIELDS = ["power_hp", "torque_nm", "dry_weight", "wet_weight", "displacement", "price", "seat_height_min", "seat_height_max"]
 
     def __init__(self):

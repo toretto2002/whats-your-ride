@@ -1,4 +1,4 @@
-OMANDA_UTENTE:
+DOMANDA_UTENTE:
 {user_question}
 
 SQL_ESEGUITO:
