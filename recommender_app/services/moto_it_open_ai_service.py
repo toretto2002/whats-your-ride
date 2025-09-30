@@ -102,7 +102,7 @@ class MotoItOpenAiBotService:
         results_payload = self.answer_bot_service.compress_results(rows, user_message)
         results_json = json.dumps(results_payload, indent=2, ensure_ascii=False)
         
-        prompt = load_prompt("utils/prompts/moto_it/answer_synthesis_prompt.txt")
+        prompt = load_prompt("utils/prompts/moto_it/answer_llm_system_prompt.txt")
         prompt = prompt.format(
             user_question=user_message,
             sql_query=sql_query or "N/A",

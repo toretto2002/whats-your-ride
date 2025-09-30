@@ -14,9 +14,10 @@ class AnswerBotService:
         È una funzione euristica: semplice, veloce, senza usare embeddings o modelli ML, ma utile per ordinare i risultati più probabili.
         Score the relevance of a database row to a given question.
         """
-        m = row._mapping if hasattr(row, "_mapping") else row
+        
+        keys = list(row.keys())
 
-        text = " ".join(str(m.get(k, "")) for k in ["brand", "model", "version", "category", "power_hp", "torque_nm", "dry_weight", "wet_weight", "displacement", "price", "seat_height_min", "seat_height_max"]).lower()
+        text = " ".join(str(row.get(k)) for k in keys).lower()
         
         user_message = message.lower()
         key_words_count = 0
