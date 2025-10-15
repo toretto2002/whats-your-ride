@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     environment:
-      FLASK_DEBUG_MODE: "1"   # override a 1 quando vuoi il debug
+      FLASK_DEBUG_MODE: "0"   # override a 1 quando vuoi il debug
     volumes:
       - .:/app
       - ./logs:/app/logs

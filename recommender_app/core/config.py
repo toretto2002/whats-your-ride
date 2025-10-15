@@ -10,3 +10,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///site.db')
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
     OPENAI_MODEL = "gpt-4o"  # o gpt-3.5-turbo
+    
+    # CORS Configuration
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200').split(',')
+    CORS_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    CORS_ALLOW_HEADERS = ['Content-Type', 'Authorization', 'Access-Control-Allow-Credentials']
+    CORS_SUPPORTS_CREDENTIALS = True

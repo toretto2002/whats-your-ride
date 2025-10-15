@@ -1,6 +1,6 @@
 from flask import Flask
 from sqlalchemy import text
-from recommender_app.extensions import db, migrate, jwt
+from recommender_app.extensions import db, migrate, jwt, cors
 from . import models
 from recommender_app.core.config import Config
 from recommender_app.api.routes import blueprints
@@ -40,6 +40,13 @@ def configure_extensions(app):
     
     # Initialize JWT
     jwt.init_app(app)
+    
+    # Initialize CORS with configuration
+    cors.init_app(app, 
+                  origins=app.config['CORS_ORIGINS'],
+                  methods=app.config['CORS_METHODS'],
+                  allow_headers=app.config['CORS_ALLOW_HEADERS'],
+                  supports_credentials=app.config['CORS_SUPPORTS_CREDENTIALS'])
 
     print("Extensions initialized.")
 
