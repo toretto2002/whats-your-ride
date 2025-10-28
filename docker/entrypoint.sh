@@ -9,8 +9,8 @@ if [[ "${FLASK_DEBUG_MODE:-0}" == "1" ]]; then
     echo "Starting Flask under debugpy on port ${DEBUG_PORT}"
     exec python -Xfrozen_modules=off -m debugpy \
       --listen "0.0.0.0:${DEBUG_PORT}" \
-      --wait-for-client \
-      -m flask run --no-reload --no-debugger "${HOST_OPTS[@]}"
+      --log-to-stderr \
+      run.py
 else
     echo "Starting Flask normally on port ${FLASK_PORT}"
     exec flask run "${HOST_OPTS[@]}"

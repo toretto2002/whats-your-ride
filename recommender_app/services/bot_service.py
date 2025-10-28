@@ -1,3 +1,13 @@
+"""
+OPZIONALE: Questo servizio usa llama-index con Ollama (modelli locali).
+Può essere mantenuto se vuoi supportare modelli locali, oppure migrato a openai-agents.
+
+Migration path (opzionale): OllamaMotorcycleQueryAgent
+
+NOTA: llama-index-llms-ollama e llama-index-embeddings-ollama 
+      possono rimanere se vuoi mantenere il supporto Ollama locale.
+"""
+
 from llama_index.core import Settings
 from llama_index.llms.ollama import Ollama
 from llama_index.core.query_engine import NLSQLTableQueryEngine
@@ -8,6 +18,11 @@ import logging
 
 
 class BotService:
+    """
+    Servizio per modelli Ollama locali.
+    
+    OPZIONALE: Può essere mantenuto con llama-index o migrato a openai-agents.
+    """
 
     def __init__(self):
 

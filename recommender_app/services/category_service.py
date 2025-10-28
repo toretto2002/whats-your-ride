@@ -24,3 +24,7 @@ class CategoryService:
 
     def list_categories(self) -> list[CategoryOut]:
         return self.category_repository.list_categories()
+    
+    def list_categories_as_tuples(self) -> list[tuple[int, str]]:
+        categories = self.category_repository.list_categories()
+        return [(cat.id, cat.name) for cat in categories]
