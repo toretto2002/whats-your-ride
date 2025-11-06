@@ -1,6 +1,8 @@
 from recommender_app import create_app
+import os
 
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, use_reloader=False)
+    debug_mode = os.getenv("FLASK_DEBUG_MODE", "0") == "1"
+    app.run(host="0.0.0.0", port=5000, debug=debug_mode, use_reloader=debug_mode)

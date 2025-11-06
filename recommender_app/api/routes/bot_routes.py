@@ -67,5 +67,6 @@ def _format_moto_it_response(raw: dict) -> dict:
         "agent": raw.get("agent"),          # opzionale: quale agente ha risposto
         "reasoning": raw.get("reasoning"),  # opzionale: spiegazione interna
         "metadata": raw.get("metadata", {}),
-        "error": raw.get("error")
+        "error": raw.get("error"),
+        "rows": raw.get("rows", [])  # opzionale: risultati della query SQL
     }
