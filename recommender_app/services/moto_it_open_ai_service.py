@@ -21,6 +21,8 @@ class MotoItOpenAiBotService:
         original_user_message = message
         result = await sql_rag_gate_agent_runner(original_user_message)
         
+        self.logger.info(f"Session {session_id}: Gate agent result - is_sql_query: {result.is_sql_query}, reasoning: {result.reasoning}, comparison_ids: {comparison_ids}")
+        
         if result.is_sql_query and not comparison_ids:
             self.logger.info(f"Session {session_id}: SQL query needed. Reasoning: {result.reasoning}")
             categories_tuples = self.categorySvc.list_categories_as_tuples()
@@ -55,12 +57,12 @@ class MotoItOpenAiBotService:
                 "total_raw_results": total_raw
             }
             
-        elif not result.is_sql_query:
+        elif not result.is_sql_query and not comparison_ids:
             self.logger.info(f"Session {session_id}: No SQL query needed. Reasoning: {result.reasoning}")
             chat_response = await simple_motorcycle_chat_agent_runner(message)
             message = chat_response.answer
             
-        elif comparison_ids:
+        elif comparison_ids and len(comparison_ids) >= 2:
             self.logger.info(f"Session {session_id}: Comparison requested for IDs {comparison_ids}.")
             comparison_response = await self.compare_bikes(
                 bike_ids=comparison_ids,
@@ -80,7 +82,7 @@ class MotoItOpenAiBotService:
         
         
         return {
-            "answer": message,
+             "answer": message,
             "reasoning": result.reasoning,
             "rows": [],
             "session_id": session_id,
@@ -119,7 +121,7 @@ class MotoItOpenAiBotService:
             Lista di dizionari contenenti i dati delle moto
         """
         try:
-            sql_query = f"SELECT * FROM motorcycles WHERE id IN ({', '.join(map(str, bike_ids))})"
+            sql_query = f"SELECT * FROM versions_enriched WHERE version_id IN ({', '.join(map(str, bike_ids))})"
             return self.queryExecutorSvc.execute_query(sql_query)
         except Exception as e:
             self.logger.error(f"Errore nel recupero delle moto per IDs {bike_ids}: {str(e)}")
