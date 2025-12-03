@@ -39,12 +39,13 @@ async def handle_moto_it_bot_request():
     data = request.get_json()
     message = data.get("message")
     session_id = data.get("session_id")  # parametro opzionale
+    comparison_ids = data.get("comparison_ids")  # parametro opzionale
 
     if not message:
         return jsonify({"error": "Messaggio mancante"}), 400
     
     try:
-        raw_response = await moto_it_open_ai_bot_service.ask(message, session_id=session_id)
+        raw_response = await moto_it_open_ai_bot_service.ask(message, session_id=session_id, comparison_ids=comparison_ids)
         formatted = _format_moto_it_response(raw_response)
         if formatted.get("error"):
             return jsonify(formatted), 500
